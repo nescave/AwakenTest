@@ -44,7 +44,7 @@ void UGTClamberUp::TickTask(float DeltaTime)
 	ElapsedTime += DeltaTime;
 	if (ElapsedTime >= TaskDuration)
 	{
-		ControlledCharacter->GetCharacterMovement()->Velocity += (TargetLocation - ControlledCharacter->GetActorLocation()) * 100.f ;
+		ControlledCharacter->GetCharacterMovement()->Velocity += (TargetLocation - ControlledCharacter->GetActorLocation()) * 5.f ;
 		EndTask();
 	}
 }

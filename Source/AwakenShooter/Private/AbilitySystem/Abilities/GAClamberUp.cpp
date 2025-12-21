@@ -31,9 +31,9 @@ void UGAClamberUp::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	{
 		UGTClamberUp::Create(Character->GetGameplayTasksComponent(),
 		   State->GetHangingPoint().Location - State->GetHangingPoint().Normal * 50.f,
-		   Character, 1.f)->ReadyForActivation();
+		   Character, .35f)->ReadyForActivation();
 	}
-	MoveComp->Velocity += FVector::UpVector * 800.f;
+	MoveComp->Velocity += FVector::UpVector * 1400.f;
 	MoveComp->SetMovementMode(MOVE_Falling);
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

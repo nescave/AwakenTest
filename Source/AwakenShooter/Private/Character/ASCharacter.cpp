@@ -3,15 +3,18 @@
 #include "Character/ASCharacter.h"
 
 #include "AbilitySystemComponent.h"
-#include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AwakenShooter.h"
+#include "PackageTools.h"
 #include "AbilitySystem/CharacterAttributeSet.h"
 #include "Character/MovementState/MovementStateComponent.h"
+#include "Engine/OverlapResult.h"
+#include "Items/Gun.h"
+#include "Items/Interactive.h"
 
 AASCharacter::AASCharacter()
 	: CachedInternalMovementSpeed(100.f)
@@ -73,6 +76,12 @@ void AASCharacter::BeginPlay()
 	OnAttributesChanged.AddDynamic(this, &AASCharacter::UpdateMovementSpeed);
 	CachedInternalMovementSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	ApplyStartupGameplayEffects();
+
+	if (InitialGunClass)
+	{
+		AGun* NewGun = GetWorld()->SpawnActor<AGun>(InitialGunClass);
+		EquipGun(NewGun);
+	}
 }
 
 void AASCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
@@ -102,6 +111,7 @@ void AASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleCrouchInput);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleSprintInput);
 		EnhancedInputComponent->BindAction(WallRunAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleWallRunInput);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleThrowInput);
 		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleThrowInput);
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleReloadInput);
 	}
@@ -164,9 +174,19 @@ void AASCharacter::HandleWallRunInput(const FInputActionValue& Value)
 	MovementStateMachine->HandleWallRun(Value);
 }
 
+void AASCharacter::HandleInteractInput(const FInputActionValue& Value)
+{
+	if (!PossibleInteraction)
+	{
+		return;
+	}
+	PossibleInteraction->Interact(this);
+}
+
 void AASCharacter::HandleThrowInput(const FInputActionValue& Value)
 {
-	MovementStateMachine->HandleThrow(Value);
+	ThrowEquipped();
+	// MovementStateMachine->HandleThrow(Value);
 }
 
 void AASCharacter::HandleReloadInput(const FInputActionValue& Value)
@@ -190,11 +210,56 @@ void AASCharacter::ApplyStartupGameplayEffects()
 	}
 }
 
-void AASCharacter::SimpleJump()
+bool AASCharacter::TryFindInteraction(IInteractive*& OutInteraction)
 {
-	UE_LOG(LogAwakenShooter, Warning, TEXT("Called SimpleJump()"));
-	GetCharacterMovement()->Velocity.Z = FMath::Max(GetCharacterMovement()->Velocity.Z, AttributeSet->GetJumpPower());
-	GetCharacterMovement()->SetMovementMode(MOVE_Falling);
+	const FVector Position = GetCameraComponent()->GetComponentLocation() + GetCameraComponent()->GetForwardVector() * 50.f;
+	FCollisionQueryParams Params;
+	if (EquippedGun)
+		Params.AddIgnoredActor(EquippedGun);
+	
+	TArray<FOverlapResult> Interactions;
+	IInteractive* Interactive = nullptr;
+	if (GetWorld()->OverlapMultiByChannel(Interactions, Position, FQuat::Identity, ECC_GameTraceChannel1, 
+		FCollisionShape::MakeCapsule(40.f, 60.f), Params))
+	{
+		float ClosestMatch = -1.f;
+		for (const auto& Item : Interactions)
+		{
+			if(!Item.GetActor())
+			{
+				continue;
+			}
+			FVector DirectionToItem = 
+				(Item.GetActor()->GetActorLocation() - GetCameraComponent()->GetComponentLocation()).GetSafeNormal();
+			float IDotC = DirectionToItem.Dot(GetCameraComponent()->GetForwardVector());
+			if (IDotC > ClosestMatch)
+			{
+				Interactive = Cast<IInteractive>(Item.GetActor());
+				ClosestMatch = IDotC;
+			}
+		}
+	}
+	if (OutInteraction != Interactive)
+	{
+		OutInteraction->SetHighlighted(0.f);
+		OutInteraction = Interactive;
+		if (OutInteraction)
+		{
+			OutInteraction->SetHighlighted(1.f);
+		}
+	}
+	
+	if (OutInteraction)
+	{
+		return true;
+	}
+	return false;
+}
+
+void AASCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	TryFindInteraction(PossibleInteraction);
 }
 
 bool AASCharacter::TryFindWall(FHitResult& OutHitResult)
@@ -252,8 +317,6 @@ bool AASCharacter::TryFindWall(FHitResult& OutHitResult)
 			return true;
 		}
 	}
-
-	
 	return false;
 }
 
@@ -272,6 +335,31 @@ void AASCharacter::UpdateMovementSpeed(const FGameplayAttribute& Attribute, floa
 	{
 		GetCharacterMovement()->MaxWalkSpeed = CachedInternalMovementSpeed * NewValue;
 	}
+}
+
+void AASCharacter::EquipGun(AGun* Gun)
+{
+	if (EquippedGun)
+	{
+		EquippedGun->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	}
+
+	EquippedGun = Gun;
+	EquippedGun->AttachToComponent(
+		FirstPersonMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("HandGrip_R"));
+}
+
+void AASCharacter::ThrowEquipped()
+{
+	if (!EquippedGun)
+		return;
+	UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(EquippedGun->GetRootComponent());
+	if (!Primitive)
+		return;
+	
+	EquippedGun->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	Primitive->SetSimulatePhysics(true);
+	Primitive->AddForce(FirstPersonCameraComponent->GetForwardVector() * 100.f);
 }
 
 EMovementState AASCharacter::GetCurrentMovementState() const

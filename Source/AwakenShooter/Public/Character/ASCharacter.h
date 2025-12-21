@@ -46,13 +46,20 @@ class AASCharacter : public ACharacter
 	TObjectPtr<UGameplayTasksComponent> GameplayTasksComponent;
 	
 protected:
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Attributes")
 	UCharacterAttributeSet* AttributeSet;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AbilitiesSystem")
 	TArray<TSubclassOf<UGameplayEffect>> StartupGameplayEffects;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="AbilitiesSystem")
 	TMap<FGameplayTag, TSubclassOf<UGameplayEffect>> CharacterEffects;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
+	TSubclassOf<class AGun> InitialGunClass; 
+	UPROPERTY(BlueprintReadOnly, Category="Weapons")
+	AGun* EquippedGun;
+	
+	UPROPERTY(BlueprintReadOnly, Category="Interaction")
+	class IInteractive* PossibleInteraction;
 	
 	// InputActions
 	UPROPERTY(EditAnywhere, Category ="Input")
@@ -67,6 +74,8 @@ protected:
 	UInputAction* SprintAction;	
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* WallRunAction;
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* InteractAction;
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* ThrowAction;
 	UPROPERTY(EditAnywhere, Category ="Input")
@@ -97,18 +106,19 @@ protected:
 	void HandleJumpInput(const FInputActionValue& Value);
 	void HandleCrouchInput(const FInputActionValue& Value);
 	void HandleSprintInput(const FInputActionValue& Value);
-	void HandleWallRunInput(const FInputActionValue& Value);	
+	void HandleWallRunInput(const FInputActionValue& Value);
+	void HandleInteractInput(const FInputActionValue& Value);
 	void HandleThrowInput(const FInputActionValue& Value);
 	void HandleReloadInput(const FInputActionValue& Value);
 	
 protected:
 	void ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectToApply);
 	void ApplyStartupGameplayEffects();
-	
-public:
-	// MoveActions
-	void SimpleJump();
+	bool TryFindInteraction(class IInteractive*& OutInteraction);
 
+public:
+	virtual void Tick(float DeltaSeconds) override;
+	
 	bool TryFindWall(FHitResult& OutHitResult);
 
 	UFUNCTION(BlueprintCallable, Category="AbilitySystem")
@@ -116,6 +126,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Character")
 	void UpdateMovementSpeed(const FGameplayAttribute& Attribute, float NewValue);
 
+	// Guns
+	UFUNCTION(BlueprintCallable, Category="Equipment")
+	void EquipGun(AGun* Gun);
+	UFUNCTION(BlueprintCallable, Category="Equipment")
+	void ThrowEquipped();
+	
+	UFUNCTION(BlueprintCallable, Category="Equipment")
+	AGun* GetEquippedGun() { return EquippedGun; }
+	
 	// General Getters
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Character")
 	USkeletalMeshComponent* GetFirstPersonMesh() const { return FirstPersonMesh; }

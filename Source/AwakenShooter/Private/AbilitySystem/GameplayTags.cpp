@@ -28,6 +28,9 @@ namespace FGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Jump, "Ability.Jump");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_ClamberUp, "Ability.ClamberUp");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Slide, "Ability.Slide");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Fire, "Ability.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Hit, "Ability.Hit");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Throw, "Ability.Throw");
 
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_JumpCost, "Data.JumpCost");

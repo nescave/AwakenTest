@@ -39,7 +39,7 @@ bool UMovementStateComponent::ChangeState(EMovementState NewState, bool bForce, 
 {
 	if (CurrentState)
 	{
-		if ( GetCurrentStateID() == NewState || CurrentState->IsLocked() && !bForce)
+		if ( (GetCurrentStateID() == NewState || CurrentState->IsLocked()) && !bForce)
 		{
 			UE_LOG(LogAwakenShooter, Warning, TEXT("Movement state wasn't changed but it is still in a valid state"));
 			PrimaryComponentTick.SetTickFunctionEnable(true);
