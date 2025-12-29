@@ -33,7 +33,7 @@ void USprintingState::HandleSprint(const FInputActionValue& Value)
 
 void USprintingState::HandleCrouch(const FInputActionValue& Value)
 {
-	Character->TryActivateAbilityByTag(FGameplayTags::Ability_Slide);
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability_Slide);
 	StateMachine->ChangeState(EMovementState::Sliding);
 }
 
@@ -43,7 +43,7 @@ void USprintingState::OnEnterState_Implementation()
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
 		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability_Reload);		
 		ASC->CancelAbilities(&CancelAbilitiesTags);
 	}
 }

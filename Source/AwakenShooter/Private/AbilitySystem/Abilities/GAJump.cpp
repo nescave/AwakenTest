@@ -13,7 +13,7 @@
 UGAJump::UGAJump()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_Jump));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Jump));
 }
 
 void UGAJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

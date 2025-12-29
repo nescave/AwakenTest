@@ -13,4 +13,9 @@ UCLASS()
 class AWAKENSHOOTER_API UGAUseMain : public UGameplayAbility
 {
 	GENERATED_BODY()
+public:
+	UGAUseMain();
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	
 };

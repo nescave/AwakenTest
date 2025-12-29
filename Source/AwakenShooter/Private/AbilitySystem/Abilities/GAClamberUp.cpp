@@ -13,7 +13,7 @@
 
 UGAClamberUp::UGAClamberUp()
 {
-	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_ClamberUp));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_ClamberUp));
 }
 
 void UGAClamberUp::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

@@ -35,6 +35,6 @@ void UCrouchingState::HandleReload(const FInputActionValue& Value)
 {
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FGameplayTags::Ability_Reload));
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Reload));
 	}
 }

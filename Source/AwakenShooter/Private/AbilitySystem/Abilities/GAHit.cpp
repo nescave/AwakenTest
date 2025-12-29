@@ -7,5 +7,5 @@
 
 UGAHit::UGAHit()
 {
-	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_Hit));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Hit));
 }

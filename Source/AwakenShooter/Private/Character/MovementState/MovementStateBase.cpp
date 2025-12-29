@@ -133,7 +133,7 @@ void UMovementStateBase::HandleMove(const FInputActionValue& Value)
 
 void UMovementStateBase::HandleJump(const FInputActionValue& Value)
 {
-	Character->TryActivateAbilityByTag(FGameplayTags::Ability_Jump);		
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability_Jump);		
 }
 
 void UMovementStateBase::HandleCrouch(const FInputActionValue& Value)
@@ -151,30 +151,26 @@ void UMovementStateBase::HandleSprint(const FInputActionValue& Value)
 
 void UMovementStateBase::HandleGunMain(const FInputActionValue& Value)
 {
-	if (!Character->GetEquippedGun())
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		return;
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
 	}
-	Character->GetEquippedGun()->MainAction();
 }
 
 void UMovementStateBase::HandleGunSecondary(const FInputActionValue& Value)
 {
-	if (!Character->GetEquippedGun())
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		return;
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
 	}
-	Character->GetEquippedGun()->SecondaryAction();
-}
-
-void UMovementStateBase::HandleReload(const FInputActionValue& Value)
-{
-	
 }
 
 void UMovementStateBase::HandleThrow(const FInputActionValue& Value)
 {
-	
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Throw));
+	}
 }
 
 FVector UMovementStateBase::GetJumpDirection()

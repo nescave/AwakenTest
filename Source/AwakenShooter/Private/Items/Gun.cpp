@@ -59,7 +59,7 @@ void AGun::BeginPlay()
 	}
 	if (GunAbilitySystemComponent)
 	{
-		GunAbilitySystemComponent->AddGameplayCue(FGameplayTags::GameplayCue_Gun_MuzzleFlare0);
+		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue_Gun_MuzzleFlare0);
 	}
 }
 

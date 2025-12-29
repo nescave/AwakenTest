@@ -11,7 +11,7 @@
 
 UGAReload::UGAReload()
 {
-	SetAssetTags(FGameplayTagContainer(FGameplayTagContainer(FGameplayTags::Ability_Reload)));
+	SetAssetTags(FGameplayTagContainer(FGameplayTagContainer(FASGameplayTags::Ability_Reload)));
 }
 
 void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -39,7 +39,7 @@ void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 	UAbilityTask_WaitGameplayEvent* Task = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
-		FGameplayTags::Ability_Event_FinishedReloading);
+		FASGameplayTags::Ability_Event_FinishedReloading);
 
 	Task->EventReceived.AddDynamic(
 		this,

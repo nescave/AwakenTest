@@ -49,7 +49,7 @@ void UHangingState::OnEnterState_Implementation()
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
 		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability_Reload);		
 		ASC->CancelAbilities(&CancelAbilitiesTags);
 	}
 }
@@ -191,7 +191,7 @@ void UHangingState::HandleJump(const FInputActionValue& Value)
 		{
 			if (OutHit.Normal.Dot(FVector::UpVector) > .5f)
 			{
-				Character->TryActivateAbilityByTag(FGameplayTags::Ability_ClamberUp);
+				Character->TryActivateAbilityByTag(FASGameplayTags::Ability_ClamberUp);
 			}
 		}
 		return;

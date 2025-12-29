@@ -12,7 +12,7 @@ UGASlide::UGASlide() :
 	SlideSpeedBoost(1.5f)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_Slide));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Slide));
 }
 
 void UGASlide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

@@ -89,7 +89,7 @@ public:
 	virtual void HandleWallRun(const FInputActionValue& Value) {}
 	virtual void HandleGunMain(const FInputActionValue& Value);
 	virtual void HandleGunSecondary(const FInputActionValue& Value);	
-	virtual void HandleReload(const FInputActionValue& Value);
+	virtual void HandleReload(const FInputActionValue& Value) {}
 	virtual void HandleThrow(const FInputActionValue& Value);
 
 

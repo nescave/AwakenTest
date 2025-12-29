@@ -15,4 +15,6 @@ class AWAKENSHOOTER_API UGAThrow : public UGameplayAbility
 	GENERATED_BODY()
 public:
 	UGAThrow();
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };

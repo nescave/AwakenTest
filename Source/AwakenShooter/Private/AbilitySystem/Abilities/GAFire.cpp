@@ -49,7 +49,7 @@ bool UGAFire::TraceFire(AASCharacter& HitCharacter)
 
 UGAFire::UGAFire()
 {
-	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_Fire));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Fire));
 }
 
 void UGAFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -70,10 +70,10 @@ void UGAFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 
 	if (auto ASC = Gun->GetGunAbilitySystemComponent())
 	{
-		ASC->ExecuteGameplayCue(FGameplayTags::GameplayCue_Gun_MuzzleFlare0);
+		ASC->ExecuteGameplayCue(FASGameplayTags::GameplayCue_Gun_MuzzleFlare0);
 
 		// cancel reload if we start firing
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability_Reload);		
 		ASC->CancelAbilities(&CancelAbilitiesTags);
 	}
 	

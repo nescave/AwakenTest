@@ -140,8 +140,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Equipment")
 	void ThrowEquipped();
 	
-	UFUNCTION(BlueprintCallable, Category="Equipment")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Equipment")
 	AGun* GetEquippedGun() const { return EquippedGun; }
+	UFUNCTION(BlueprintCallable, Category="Equipment")
+	void SetEquippedGun(AGun* NewGun);
 	
 	// General Getters
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Character")

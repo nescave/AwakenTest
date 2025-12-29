@@ -2,3 +2,35 @@
 
 
 #include "AbilitySystem/Abilities/GAUseSecondary.h"
+
+#include "AbilitySystem/GameplayTags.h"
+#include "Character/ASCharacter.h"
+#include "Items/Gun.h"
+
+UGAUseSecondary::UGAUseSecondary()
+{
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
+}
+
+void UGAUseSecondary::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	const FGameplayEventData* TriggerEventData)
+{
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		return;
+	}
+	AASCharacter* Character = Cast<AASCharacter>(ActorInfo->AvatarActor);
+	if (!Character)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		return;
+	}
+	
+	if (AGun* Gun = Character->GetEquippedGun())
+	{
+		Gun->SecondaryAction();
+	}
+	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+}

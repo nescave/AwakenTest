@@ -34,7 +34,7 @@ void UFallingState::OnEnterState_Implementation()
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
 		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability_Reload);		
 		ASC->CancelAbilities(&CancelAbilitiesTags);
 	}
 }

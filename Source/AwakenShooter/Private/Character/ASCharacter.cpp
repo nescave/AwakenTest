@@ -431,6 +431,11 @@ void AASCharacter::ThrowEquipped()
 	EquippedGun = nullptr;
 }
 
+void AASCharacter::SetEquippedGun(AGun* NewGun)
+{
+	EquippedGun = NewGun;
+}
+
 EMovementState AASCharacter::GetCurrentMovementState() const
 {
 	if (!MovementStateMachine->IsValidLowLevel())

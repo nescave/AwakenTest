@@ -8,7 +8,7 @@
 /**
  * 
  */
-namespace FGameplayTags
+namespace FASGameplayTags
 {
 	// Gameplay effects
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Walking);
@@ -38,6 +38,8 @@ namespace FGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hit);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Throw);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Reload);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Main);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Secondary);
 
 	// Events
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Event_FinishedReloading);

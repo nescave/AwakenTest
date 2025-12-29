@@ -3,7 +3,7 @@
 
 #include "AbilitySystem/GameplayTags.h"
 
-namespace FGameplayTags
+namespace FASGameplayTags
 {
 	// Gameplay effects
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Walking, "Effect.Walking");
@@ -33,6 +33,8 @@ namespace FGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Hit, "Ability.Hit");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Throw, "Ability.Throw");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Reload, "Ability.Reload");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Main, "Ability.Main");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Secondary, "Ability.Secondary");
 	
 	// Events
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Event_FinishedReloading, "Ability.Event.FinishedReloading");
