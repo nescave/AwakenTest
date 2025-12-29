@@ -21,21 +21,22 @@ class AWAKENSHOOTER_API UHangingState : public UMovementStateBase
 	bool bIsWallRunning;
 	
 	FHitResult HangingPoint;
-	bool bCatchedLedge;
+	bool bGrabbedLedge;
 	float HangingTime;
 	int32 WallRunCount;
 	
 public:
 	UHangingState();
+	
+	virtual void OnEnterState_Implementation() override;
+	virtual void OnExitState_Implementation() override;
+	virtual void OnStateTick_Implementation(float DeltaTime) override;
+	
 	virtual void HandleMove(const FInputActionValue& Value) override;
 	virtual void HandleJump(const FInputActionValue& Value) override;
 	virtual void HandleCrouch(const FInputActionValue& Value) override;
 	virtual void HandleSprint(const FInputActionValue& Value) override {}
 	virtual void HandleWallRun(const FInputActionValue& Value) override;
-	
-	virtual void OnEnterState_Implementation() override;
-	virtual void OnExitState_Implementation() override;
-	virtual void OnStateTick_Implementation(float DeltaTime) override;
 
 	virtual FVector GetJumpDirection() override;
 	const FHitResult& GetHangingPoint() const {return HangingPoint;}

@@ -138,6 +138,20 @@ void UMovementStateComponent::HandleWallRun(const FInputActionValue& Value)
 	CurrentState->HandleWallRun(Value);
 }
 
+void UMovementStateComponent::HandleGunMain(const FInputActionValue& Value)
+{
+	if (!CurrentState)
+		return;
+	CurrentState->HandleGunMain(Value);
+}
+
+void UMovementStateComponent::HandleGunSecondary(const FInputActionValue& Value)
+{
+	if (!CurrentState)
+		return;
+	CurrentState->HandleGunSecondary(Value);
+}
+
 void UMovementStateComponent::HandleThrow(const FInputActionValue& Value)
 {
 	if (!CurrentState)

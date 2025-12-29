@@ -48,6 +48,8 @@ public:
 	void HandleCrouch(const FInputActionValue& Value);
 	void HandleSprint(const FInputActionValue& Value);
 	void HandleWallRun(const FInputActionValue& Value);
+	void HandleGunMain(const FInputActionValue& Value);
+	void HandleGunSecondary(const FInputActionValue& Value);
 	void HandleThrow(const FInputActionValue& Value);
 	void HandleReload(const FInputActionValue& Value);
 

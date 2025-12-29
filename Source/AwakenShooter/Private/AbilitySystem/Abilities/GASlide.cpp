@@ -8,7 +8,8 @@
 #include "Character/ASCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-UGASlide::UGASlide()
+UGASlide::UGASlide() :
+	SlideSpeedBoost(1.5f)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	SetAssetTags(FGameplayTagContainer(FGameplayTags::Ability_Slide));
@@ -25,6 +26,6 @@ void UGASlide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		return;
 	}
 
-	Character->GetCharacterMovement()->Velocity *= 1.4f;
+	Character->GetCharacterMovement()->Velocity *= SlideSpeedBoost;
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

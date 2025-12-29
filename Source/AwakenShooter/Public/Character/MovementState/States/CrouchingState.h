@@ -17,9 +17,10 @@ class AWAKENSHOOTER_API UCrouchingState : public UMovementStateBase
 
 public:
 	UCrouchingState();
-
-	virtual void HandleCrouch(const FInputActionValue& Value) override;
 	
 	virtual void OnEnterState_Implementation() override;
 	virtual void OnExitState_Implementation() override;
+
+	virtual void HandleCrouch(const FInputActionValue& Value) override;
+	virtual void HandleReload(const FInputActionValue& Value) override;
 };

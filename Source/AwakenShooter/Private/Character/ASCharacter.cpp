@@ -9,12 +9,12 @@
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AwakenShooter.h"
-#include "PackageTools.h"
 #include "AbilitySystem/CharacterAttributeSet.h"
 #include "Character/MovementState/MovementStateComponent.h"
 #include "Engine/OverlapResult.h"
+#include "General/DebugCVars.h"
 #include "Items/Gun.h"
-#include "Items/Interactive.h"
+#include "Items/Interactable.h"
 
 AASCharacter::AASCharacter()
 	: CachedInternalMovementSpeed(100.f)
@@ -111,7 +111,9 @@ void AASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleCrouchInput);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleSprintInput);
 		EnhancedInputComponent->BindAction(WallRunAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleWallRunInput);
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleThrowInput);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleInteractInput);
+		EnhancedInputComponent->BindAction(GunMainAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleGunMainInput);
+		EnhancedInputComponent->BindAction(GunSecondaryAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleGunSecondaryInput);
 		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleThrowInput);
 		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleReloadInput);
 	}
@@ -176,11 +178,22 @@ void AASCharacter::HandleWallRunInput(const FInputActionValue& Value)
 
 void AASCharacter::HandleInteractInput(const FInputActionValue& Value)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Interact"));
 	if (!PossibleInteraction)
 	{
 		return;
 	}
-	PossibleInteraction->Interact(this);
+	GetPossibleInteraction()->Interact(this);
+}
+
+void AASCharacter::HandleGunMainInput(const FInputActionValue& Value)
+{
+	MovementStateMachine->HandleGunMain(Value);
+}
+
+void AASCharacter::HandleGunSecondaryInput(const FInputActionValue& Value)
+{
+	MovementStateMachine->HandleGunSecondary(Value);
 }
 
 void AASCharacter::HandleThrowInput(const FInputActionValue& Value)
@@ -210,67 +223,125 @@ void AASCharacter::ApplyStartupGameplayEffects()
 	}
 }
 
-bool AASCharacter::TryFindInteraction(IInteractive*& OutInteraction)
+bool AASCharacter::TryFindInteraction()
 {
-	const FVector Position = GetCameraComponent()->GetComponentLocation() + GetCameraComponent()->GetForwardVector() * 50.f;
+	const FVector Position = GetCameraComponent()->GetComponentLocation() + GetCameraComponent()->GetForwardVector() * 120.f;
 	FCollisionQueryParams Params;
 	if (EquippedGun)
 		Params.AddIgnoredActor(EquippedGun);
-	
+
 	TArray<FOverlapResult> Interactions;
-	IInteractive* Interactive = nullptr;
-	if (GetWorld()->OverlapMultiByChannel(Interactions, Position, FQuat::Identity, ECC_GameTraceChannel1, 
-		FCollisionShape::MakeCapsule(40.f, 60.f), Params))
+	TArray<IInteractable*> Interactables;
+	
+	IInteractable* Interactive = nullptr;
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawInteractionsZone)
+	{
+		DrawDebugSphere(GetWorld(), Position, 85.f,12,
+			FColor::Red, false, 0.f, 0.f, .25f);
+	}
+	if (GetWorld()->OverlapMultiByChannel(Interactions, Position, FQuat::Identity, ECC_GameTraceChannel2, 
+		FCollisionShape::MakeSphere(85.f), Params))
 	{
 		float ClosestMatch = -1.f;
 		for (const auto& Item : Interactions)
 		{
-			if(!Item.GetActor())
+			if(!(Item.GetActor() && Item.GetActor()->Implements<UInteractable>()) )
 			{
 				continue;
+			}
+			if (FASCVars::ASDebugDraw && FASCVars::ASDrawDetailedInteractions)
+			{
+				Interactables.Add(Cast<IInteractable>(Item.GetActor()));
 			}
 			FVector DirectionToItem = 
 				(Item.GetActor()->GetActorLocation() - GetCameraComponent()->GetComponentLocation()).GetSafeNormal();
 			float IDotC = DirectionToItem.Dot(GetCameraComponent()->GetForwardVector());
 			if (IDotC > ClosestMatch)
 			{
-				Interactive = Cast<IInteractive>(Item.GetActor());
+				Interactive = Cast<IInteractable>(Item.GetActor());
 				ClosestMatch = IDotC;
 			}
 		}
 	}
-	if (OutInteraction != Interactive)
+
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawDetailedInteractions)
 	{
-		OutInteraction->SetHighlighted(0.f);
-		OutInteraction = Interactive;
-		if (OutInteraction)
+		for (const auto& Item : Interactables)
 		{
-			OutInteraction->SetHighlighted(1.f);
+			AActor* Actor = Cast<AActor>(Item);
+			FColor Color = FColor::Red;
+			if (Item == Interactive)
+			{
+				Color = FColor::Green;
+			}
+			DrawDebugSphere(GetWorld(), Actor->GetActorLocation(), 20.f,4,
+				Color, false, 0.f, 0.f, 1.f);
 		}
 	}
 	
-	if (OutInteraction)
+	SetPossibleInteraction(Interactive);
+	
+	if (PossibleInteraction)
 	{
 		return true;
 	}
 	return false;
 }
 
+void AASCharacter::SetPossibleInteraction(IInteractable* NewInteraction)
+{
+	if (IInteractable* OldInteraction = GetPossibleInteraction())
+	{
+		if (OldInteraction == NewInteraction)
+			return;
+		
+		OldInteraction->SetHighlighted(0.f);
+	}
+	if (AActor* InteractableActor = Cast<AActor>(NewInteraction))
+	{
+		NewInteraction->SetHighlighted(1.f);
+		PossibleInteraction = InteractableActor;
+	}
+	else
+	{
+		PossibleInteraction = nullptr;
+	}
+}
+
+IInteractable* AASCharacter::GetPossibleInteraction() const
+{
+	return Cast<IInteractable>(PossibleInteraction);
+}
+
 void AASCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	TryFindInteraction(PossibleInteraction);
+	if (TryFindInteraction())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, DeltaSeconds, FColor::Red, TEXT("Possible Interaction: ")
+			+ PossibleInteraction->GetName());
+	}
+	
 }
 
 bool AASCharacter::TryFindWall(FHitResult& OutHitResult)
 {
 	const FVector Start = GetCameraComponent()->GetComponentLocation();
-	const FVector Forward =
-		(FVector(GetMovementComponent()->Velocity.X, GetMovementComponent()->Velocity.X, 0.f) + GetActorForwardVector()).GetSafeNormal();
+	const FVector Forward =(
+		FVector(GetMovementComponent()->Velocity.X, GetMovementComponent()->Velocity.Y, 0.f).GetSafeNormal()
+		+ GetActorForwardVector())
+		.GetSafeNormal();
 	const FVector EndFront = Start + Forward * 50.f;
-	const FVector EndRight = Start + Forward.RotateAngleAxis(15.f, FVector::UpVector) * 50.f;
-	const FVector EndLeft = Start + Forward.RotateAngleAxis(-15.f, FVector::UpVector) * 50.f;
-
+	const FVector EndRight = Start + Forward.RotateAngleAxis(25.f, FVector::UpVector) * 50.f;
+	const FVector EndLeft = Start + Forward.RotateAngleAxis(-25.f, FVector::UpVector) * 50.f;
+	constexpr float CheckCapsuleHalfHeight = 15.f;
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
+	{
+		DrawDebugCapsule(GetWorld(), EndFront, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
+		DrawDebugCapsule(GetWorld(), EndRight, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
+		DrawDebugCapsule(GetWorld(), EndLeft, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
+	}
+	
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
@@ -279,38 +350,42 @@ bool AASCharacter::TryFindWall(FHitResult& OutHitResult)
 		Start,
 		EndFront,
 		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(10.f, 10.f),
+		ECC_WorldStatic,
+		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
 		Params)
 		|| GetWorld()->SweepSingleByChannel(
 		OutHitResult,
 		Start,
 		EndRight,
 		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(10.f, 10.f),
+		ECC_WorldStatic,
+		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
 		Params)
 		|| GetWorld()->SweepSingleByChannel(
 		OutHitResult,
 		Start,
 		EndLeft,
 		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(10.f, 10.f),
+		ECC_WorldStatic,
+		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
 		Params))
 	{
-		if (OutHitResult.Normal.Dot(Forward) > -.5f)
+		const FVector End = Start - OutHitResult.Normal * 70.f;
+		if (GetWorld()->SweepSingleByChannel(
+			OutHitResult,
+			Start,
+			End,
+			FQuat::Identity,
+			ECC_WorldStatic,
+			FCollisionShape::MakeCapsule(10.f, 20.f),
+			Params))
 		{
-			const FVector End = Start - OutHitResult.Normal * 70.f;
-			GetWorld()->SweepSingleByChannel(
-				OutHitResult,
-				Start,
-				End,
-				FQuat::Identity,
-				ECC_Visibility,
-				FCollisionShape::MakeCapsule(10.f, 10.f),
-				Params
-			);
+			if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
+			{
+				DrawDebugCapsule(GetWorld(),
+					OutHitResult.ImpactPoint, CheckCapsuleHalfHeight, 10.f, FQuat::Identity,
+					FColor::Green, false, FASCVars::ASDebugDrawDuration, 0.f, .25f);
+			}	
 		}
 		if (FMath::Abs(OutHitResult.Normal.Dot(FVector::UpVector)) < .25f)
 		{
@@ -341,25 +416,19 @@ void AASCharacter::EquipGun(AGun* Gun)
 {
 	if (EquippedGun)
 	{
-		EquippedGun->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		EquippedGun->SetGunHolder(nullptr);
 	}
-
 	EquippedGun = Gun;
-	EquippedGun->AttachToComponent(
-		FirstPersonMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("HandGrip_R"));
+	EquippedGun->SetGunHolder(this);
 }
 
 void AASCharacter::ThrowEquipped()
 {
 	if (!EquippedGun)
 		return;
-	UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(EquippedGun->GetRootComponent());
-	if (!Primitive)
-		return;
 	
-	EquippedGun->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-	Primitive->SetSimulatePhysics(true);
-	Primitive->AddForce(FirstPersonCameraComponent->GetForwardVector() * 100.f);
+	EquippedGun->Throw(FirstPersonCameraComponent->GetForwardVector() * 100.f);
+	EquippedGun = nullptr;
 }
 
 EMovementState AASCharacter::GetCurrentMovementState() const

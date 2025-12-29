@@ -12,6 +12,7 @@ namespace FGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Falling, "Effect.Falling");
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Hanging, "Effect.Hanging");
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Sliding, "Effect.Sliding");
+	UE_DEFINE_GAMEPLAY_TAG(Effect_Reloading, "Effect.Reloading");
 	
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Health_Regen, "Effect.Health.Regen");
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Energy_Regen, "Effect.Energy.Regen");
@@ -31,7 +32,21 @@ namespace FGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Fire, "Ability.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Hit, "Ability.Hit");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Throw, "Ability.Throw");
-
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Reload, "Ability.Reload");
+	
+	// Events
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Event_FinishedReloading, "Ability.Event.FinishedReloading");
+	
+	// Cooldown
+	UE_DEFINE_GAMEPLAY_TAG(Effect_Cooldown_Fire, "Effect.Cooldown.Fire");
+	UE_DEFINE_GAMEPLAY_TAG(Effect_Cooldown_Hit, "Effect.Cooldown.Hit");
+	
 	// Data
 	UE_DEFINE_GAMEPLAY_TAG(Data_JumpCost, "Data.JumpCost");
+
+	// Cues
+	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Gun_MuzzleFlare0, "GameplayCue.Gun.MuzzleFlare0");
+
+	
+	
 }

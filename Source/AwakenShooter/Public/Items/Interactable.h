@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "Interactive.generated.h"
+#include "Interactable.generated.h"
 
 UINTERFACE()
-class UInteractive : public UInterface
+class UInteractable : public UInterface
 {
 	GENERATED_BODY()
 };
@@ -15,7 +15,7 @@ class UInteractive : public UInterface
 /**
  * 
  */
-class AWAKENSHOOTER_API IInteractive
+class AWAKENSHOOTER_API IInteractable
 {
 	GENERATED_BODY()
 

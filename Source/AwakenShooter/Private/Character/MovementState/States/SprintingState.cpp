@@ -40,6 +40,12 @@ void USprintingState::HandleCrouch(const FInputActionValue& Value)
 void USprintingState::OnEnterState_Implementation()
 {
 	Super::OnEnterState_Implementation();
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		// cancel reload ability
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		ASC->CancelAbilities(&CancelAbilitiesTags);
+	}
 }
 
 void USprintingState::OnExitState_Implementation()

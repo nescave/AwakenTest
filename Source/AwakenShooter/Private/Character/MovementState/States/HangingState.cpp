@@ -10,17 +10,77 @@
 #include "Character/MovementState/MovementStateComponent.h"
 #include "Character/MovementState/States/FallingState.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "General/DebugCVars.h"
+
 
 UHangingState::UHangingState() :
 	CachedGravityScale(0.f),
 	CachedAirControl(0.f),
 	bCanWallRun(false),
 	bIsWallRunning(false),
-	bCatchedLedge(false),
+	bGrabbedLedge(false),
 	HangingTime(0.f)
 {
 	StateID = EMovementState::Hanging;
 	NextState = EMovementState::Falling;
+}
+
+
+void UHangingState::OnEnterState_Implementation()
+{
+	Super::OnEnterState_Implementation();
+
+	bIsWallRunning = false;
+	
+	UCharacterMovementComponent* CPC = Character->GetCharacterMovement();
+	CPC->StopMovementImmediately();
+	CPC->SetMovementMode(MOVE_Flying);
+	CPC->Velocity = FVector::ZeroVector;
+
+	HangingTime = 0.f;
+	WallRunCount = 0;
+	
+	if (GetGroundDistance() < 100.f)
+	{
+		StateMachine->NextState();
+	}
+	SetTickEnabled(true);
+
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		// cancel reload ability
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		ASC->CancelAbilities(&CancelAbilitiesTags);
+	}
+}
+
+void UHangingState::OnExitState_Implementation()
+{
+	Super::OnExitState_Implementation();
+	
+	UCharacterMovementComponent* CPC = Character->GetCharacterMovement();
+	CPC->SetMovementMode(MOVE_Falling);
+}
+
+void UHangingState::OnStateTick_Implementation(float DeltaTime)
+{
+	if (bGrabbedLedge)
+	{
+		HangingTime = 0.f;
+	}
+	else
+	{
+		HangingTime += DeltaTime;
+	}
+
+	if (HangingTime > 1.f)
+	{
+		Character->GetCharacterMovement()->Velocity -= Character->GetActorUpVector() * 2500.f * FMath::Pow(DeltaTime, 1.4f);
+	}
+	if (GetGroundDistance() < 100.f)
+	{
+		HandleCrouch(FInputActionValue());
+	}
 }
 
 void UHangingState::HandleMove(const FInputActionValue& Value)
@@ -36,12 +96,26 @@ void UHangingState::HandleMove(const FInputActionValue& Value)
 		FHitResult OutHitResult;
 		if (TryGetWallInDirection(OutHitResult))
 		{
-			if (OutHitResult.Normal.Dot(HangingPoint.Normal) > .75f)
+			float HDotR = OutHitResult.Normal.Dot(HangingPoint.Normal);
+			if (HDotR >= .75f && HDotR < .99f)
 			{
-				FRotator VelocityAdjustingRotation = FRotationMatrix::MakeFromX(HangingPoint.Normal - OutHitResult.Normal).Rotator(); 
-				Character->GetCharacterMovement()->Velocity = VelocityAdjustingRotation.RotateVector(Character->GetCharacterMovement()->Velocity);
+				FRotator DeltaRotation = (OutHitResult.Normal.Rotation() - HangingPoint.Normal.Rotation()).GetNormalized();
+				DeltaRotation.Roll = 0.f;
+
+				if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallRunDirection)
+					DrawDebugDirectionalArrow(GetWorld(), OutHitResult.Location,
+						OutHitResult.Location + Character->GetCharacterMovement()->Velocity *.1f, 1.f,
+						FColor::Red, false, 5.f, 0.f, 1.f);
+					
+				Character->GetCharacterMovement()->Velocity = DeltaRotation.RotateVector(Character->GetCharacterMovement()->Velocity) *1.1f;
+				SetHangingPoint(OutHitResult, false);
+
+				if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallRunDirection)
+					DrawDebugDirectionalArrow(GetWorld(), OutHitResult.Location,
+						OutHitResult.Location + Character->GetCharacterMovement()->Velocity *.1f, 1.f,
+						FColor::Green, false, 5.f, 0.f, 1.f);
 			}
-			else
+			else if (HDotR < .75f)
 			{
 				StopWallRun();
 			}
@@ -51,13 +125,56 @@ void UHangingState::HandleMove(const FInputActionValue& Value)
 			StopWallRun();
 		}
 	}
+	else
+	{
+		if (!(FASCVars::ASDebugDraw && FASCVars::ASDrawWallRunDirection))
+		{
+			return;
+		}
+		FVector LookDirection = Character->GetCameraComponent()->GetComponentRotation().Vector();
+		if (LookDirection.Dot(Character->GetActorUpVector()) > .7f) // Wall run up
+		{
+			FHitResult HitResult;
+			if (!TryGetWallInDirection(HitResult, Character->GetActorUpVector()))
+			{
+				return;
+			}
+			DrawDebugDirectionalArrow(GetWorld(), HitResult.Location, HitResult.Location + Character->GetActorUpVector() * 30.f,
+				1.f, FColor::Blue, false, 0.f, 0.f, 1.f);
+		}
+
+		FVector LeftVector = HangingPoint.Normal.Cross(Character->GetActorUpVector());
+		
+		if (LookDirection.Dot(LeftVector) > .7f) // Wall run left
+		{
+			FHitResult HitResult;
+			if (!TryGetWallInDirection(HitResult, LeftVector))
+			{
+				return;
+			}
+			DrawDebugDirectionalArrow(GetWorld(), HitResult.Location, HitResult.Location + LeftVector * 30.f,
+			1.f, FColor::Blue, false, 0.f, 0.f, 1.f);
+		}
+		
+		FVector RightVector = HangingPoint.Normal.Cross(-Character->GetActorUpVector());
+		if (LookDirection.Dot(RightVector) > .7f) // Wall run right
+		{
+			FHitResult HitResult;
+			if (!TryGetWallInDirection(HitResult, RightVector))
+			{
+				return;
+			}
+			DrawDebugDirectionalArrow(GetWorld(), HitResult.Location, HitResult.Location + RightVector * 30.f,
+			1.f, FColor::Blue, false, 0.f, 0.f, 1.f);
+		}
+	}
 }
 
 void UHangingState::HandleJump(const FInputActionValue& Value)
 {
 	const FVector& LookDirection = Character->GetCameraComponent()->GetForwardVector();
 	if (LookDirection.Dot(HangingPoint.Normal) < -.1f
-		&& bCatchedLedge)
+		&& bGrabbedLedge)
 	{
 		FHitResult OutHit;
 		
@@ -141,58 +258,6 @@ void UHangingState::HandleWallRun(const FInputActionValue& Value)
 	}
 }
 
-void UHangingState::OnEnterState_Implementation()
-{
-	Super::OnEnterState_Implementation();
-
-	bIsWallRunning = false;
-	
-	UCharacterMovementComponent* CPC = Character->GetCharacterMovement();
-	CPC->StopMovementImmediately();
-	CPC->SetMovementMode(MOVE_Flying);
-	CPC->Velocity = FVector::ZeroVector;
-
-	HangingTime = 0.f;
-	WallRunCount = 0;
-	
-	if (GetGroundDistance() < 100.f)
-	{
-		StateMachine->NextState();
-	}
-	SetTickEnabled(true);
-}
-
-void UHangingState::OnExitState_Implementation()
-{
-	Super::OnExitState_Implementation();
-	
-	UCharacterMovementComponent* CPC = Character->GetCharacterMovement();
-	CPC->SetMovementMode(MOVE_Falling);
-	// CPC->GravityScale = CachedGravityScale;
-	// CPC->AirControl = CachedAirControl;
-}
-
-void UHangingState::OnStateTick_Implementation(float DeltaTime)
-{
-	if (bCatchedLedge)
-	{
-		HangingTime = 0.f;
-	}
-	else
-	{
-		HangingTime += DeltaTime;
-	}
-
-	if (HangingTime > 1.f)
-	{
-		Character->GetCharacterMovement()->Velocity -= Character->GetActorUpVector() * 2500.f * FMath::Pow(DeltaTime, 1.4f);
-	}
-	if (GetGroundDistance() < 100.f)
-	{
-		HandleCrouch(FInputActionValue());
-	}
-}
-
 FVector UHangingState::GetJumpDirection()
 {
 	FVector LookDirection = Character->GetController()->GetControlRotation().Vector();
@@ -208,25 +273,28 @@ void UHangingState::SetHangingPoint(const FHitResult& HitResult, bool bSweepChar
 {
 	HangingPoint = HitResult;
 	// DrawDebugSphere(GetWorld(), HitResult.Location, 10.f, 7, FColor::Red, false, 5.f);
-	DrawDebugDirectionalArrow(GetWorld(), HangingPoint.Location, HangingPoint.Location + HangingPoint.Normal * 10.f,
-		10.f, FColor::Blue, false, 5.f, 0.f, 2.f);
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
+	{
+		DrawDebugDirectionalArrow(GetWorld(), HangingPoint.Location, HangingPoint.Location + HangingPoint.Normal * 10.f,
+			10.f, FColor::Blue, false, FASCVars::ASDebugDrawDuration, 0.f, 1.f);
+	}
 	FHitResult OutHit;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Character);
-	const FVector Start = HangingPoint.Location + FVector::UpVector * 20.f+ HangingPoint.Normal * 10.f;
-	DrawDebugLine(GetWorld(), Start, Start - HangingPoint.Normal * 35.f, FColor::Green, false, 5.f);
+	const FVector Start = HangingPoint.Location + FVector::UpVector * 25.f+ HangingPoint.Normal * 10.f;
 	if (GetWorld()->LineTraceSingleByChannel(OutHit,
 		Start,
 		Start - HangingPoint.Normal * 35.f,
 		 ECC_Visibility,
 		 Params))
 	{
-		bCatchedLedge = false;
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Ledge detected"));
+		bGrabbedLedge = false;
 	}else
 	{
-		bCatchedLedge = true;
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Ledge not detected"));
+		bGrabbedLedge = true;
+		if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
+			DrawDebugLine(GetWorld(), Start, Start - HangingPoint.Normal * 35.f, FColor::Green, false,
+				FASCVars::ASDebugDrawDuration, 0.f, 1.f);
 	}
 	
 	if (bSweepCharacter)
@@ -237,15 +305,11 @@ void UHangingState::StartWallRun()
 {
 	bIsWallRunning = true;
 	WallRunCount++;
-	// Character->GetCharacterMovement()->GravityScale = CachedGravityScale*.2f;
-	// Character->GetCharacterMovement()->AirControl = CachedAirControl;
 }
 
 void UHangingState::StopWallRun()
 {
 	bIsWallRunning = false;
-	// Character->GetCharacterMovement()->GravityScale = 0.f;
-	// Character->GetCharacterMovement()->AirControl = 0.f;
 	Character->GetCharacterMovement()->StopMovementImmediately();
 	Character->GetCharacterMovement()->Velocity = FVector::ZeroVector;
 	FHitResult OutHit;
@@ -268,7 +332,10 @@ bool UHangingState::TryGetWallInDirection(FHitResult& OutHitResult, FVector Dire
 		CheckRange = 15.f;
 	}
 	const FVector Start = Character->GetCameraComponent()->GetComponentLocation() + Direction * CheckRange;
-	const FVector End = Start - HangingPoint.Normal * 50.f;
+	const FVector End = Start - HangingPoint.Normal * 70.f;
+	
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawDetailWallRun)
+		DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 10.f, 0.f, 1.f);
 
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Character);
@@ -276,6 +343,6 @@ bool UHangingState::TryGetWallInDirection(FHitResult& OutHitResult, FVector Dire
 	return GetWorld()->SweepSingleByChannel(
 		OutHitResult, Start, End,
 		FQuat::Identity, ECC_Visibility,
-		FCollisionShape::MakeCapsule(10.f, 10.f), Params);
+		FCollisionShape::MakeCapsule(10.f, 25.f), Params);
 }
 

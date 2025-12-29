@@ -17,6 +17,9 @@ public:
 	UGASlide();
 	
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Slide")
+	float SlideSpeedBoost;
+	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	

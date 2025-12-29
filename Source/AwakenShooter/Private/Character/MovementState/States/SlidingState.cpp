@@ -4,16 +4,19 @@
 #include "Character/MovementState/States/SlidingState.h"
 
 #include "InputActionValue.h"
+#include "AbilitySystem/GameplayTags.h"
 #include "AbilitySystem/Tasks/GTChangeSlideDirection.h"
 #include "Character/ASCharacter.h"
 #include "Character/MovementState/MovementStateComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "General/DebugCVars.h"
 
 USlidingState::USlidingState() :
 	CachedBreakingFrictionFactor(0.f),
 	CachedGroundFriction(0.f),
 	CachedDeceleration(0.f),
 	VelocitySquaredNeededToExitSlide(250.f),
+	MoveForwardPressed(false),
 	LastRightInput(0.f),
 	SlideBaseDecelerationFactor(.1f),
 	SlideStopDecelerationFactor(1.f)
@@ -26,34 +29,36 @@ USlidingState::USlidingState() :
 void USlidingState::HandleLook(const FInputActionValue& Value)
 {
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
-	FRotator LookDeltaRotation = FRotator(-LookAxisVector.Y, LookAxisVector.X, 0.f);
-	FRotator CurrentLookRotation = Character->GetController()->GetControlRotation();
-	
-	FRotator NewLookRotation = CurrentLookRotation + LookDeltaRotation;
-	NewLookRotation.Normalize();
-	
-	FVector NewLookDirection = NewLookRotation.Vector();
-	
-	if (NewLookDirection.Dot(CachedVelocityDirection) < .25f)
+	Character->AddControllerPitchInput(-LookAxisVector.Y);
+	// Super::HandleLook(Value);
+
+	const FVector VelocityDirection = Character->GetCharacterMovement()->Velocity.GetSafeNormal();
+	const FVector2D VelocityDirection2D = FVector2D(VelocityDirection.X, VelocityDirection.Y).GetSafeNormal();
+	const FVector CharacterDirection = Character->GetController()->GetControlRotation().Vector().GetSafeNormal();
+	const FVector2D CharacterDirection2D = FVector2D(CharacterDirection.X, CharacterDirection.Y).GetSafeNormal();
+
+	float SignedAngle = FMath::RadiansToDegrees(
+		FMath::Atan2(
+			FVector::CrossProduct(VelocityDirection, CharacterDirection).Z,
+			FVector2D::DotProduct(VelocityDirection2D, CharacterDirection2D)
+		));
+	if ((LookAxisVector.X > 0.f && SignedAngle < 80) ||
+		(LookAxisVector.X < 0.f && SignedAngle > -80))
 	{
-		if (LockedLookDuration <= 0.f)
-		{
-			bLookRotationIsLocked = true;
-		}
-		return; // reject direction
+		Character->AddControllerYawInput(LookAxisVector.X);
 	}
-	if (LockedLookDuration > 0.f)
-	{
-		LockedLookDuration = 0.f;
-		bLookRotationIsLocked = false;
-	}
-	Super::HandleLook(Value);
 }
 
 void USlidingState::HandleMove(const FInputActionValue& Value)
 {
 	FVector InputVector = FVector(Value.Get<FVector2D>(), 0.f);
-	float SlideFrictionFactor = FMath::Lerp(SlideStopDecelerationFactor, SlideBaseDecelerationFactor, FMath::Clamp(InputVector.Y, 0.f, 1.f));
+	float SlideFrictionFactor = SlideBaseDecelerationFactor;
+	MoveForwardPressed = InputVector.Y >= .5f;
+	if (MoveForwardPressed == false)
+	{
+		SlideFrictionFactor = SlideStopDecelerationFactor;
+		NextState = EMovementState::Crouching;
+	}
 	Character->GetCharacterMovement()->BrakingDecelerationWalking = CachedDeceleration * SlideFrictionFactor;
 
 	if (FMath::IsNearlyEqual(InputVector.X, LastRightInput)
@@ -88,8 +93,11 @@ void USlidingState::HandleMove(const FInputActionValue& Value)
 
 void USlidingState::HandleSprint(const FInputActionValue& Value)
 {
-	NextState = EMovementState::Sprinting;
-	VelocitySquaredNeededToExitSlide *= 2.f;
+	if (MoveForwardPressed && NextState != EMovementState::Sprinting)
+	{
+		NextState = EMovementState::Sprinting;
+		VelocitySquaredNeededToExitSlide *= 2.f;
+	}
 }
 
 void USlidingState::OnEnterState_Implementation()
@@ -102,23 +110,30 @@ void USlidingState::OnEnterState_Implementation()
 	CachedDeceleration = Character->GetCharacterMovement()->BrakingDecelerationWalking;
 	CachedVelocityDirection = Character->GetCharacterMovement()->Velocity.GetSafeNormal();
 	VelocitySquaredNeededToExitSlide = FMath::Square(Character->GetCachedInternalMovementSpeed()*.5f);
-
 	
 	Character->GetCharacterMovement()->BrakingFrictionFactor = 1.f;
 	Character->GetCharacterMovement()->GroundFriction = 0.1f;
 	Character->GetCharacterMovement()->BrakingDecelerationWalking = CachedDeceleration * SlideBaseDecelerationFactor;
 	Character->GetCharacterMovement()->MaxWalkSpeed = Character->GetCachedInternalMovementSpeed()*.25f;
+
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		// cancel reload ability
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		ASC->CancelAbilities(&CancelAbilitiesTags);
+	}
 }
 
 void USlidingState::OnExitState_Implementation()
 {
 	Super::OnExitState_Implementation();
 	Character->GetCharacterMovement()->bUseSeparateBrakingFriction = false;
+	Character->GetCharacterMovement()->bOrientRotationToMovement = false;
 	Character->GetCharacterMovement()->BrakingFrictionFactor = CachedBreakingFrictionFactor;
 	Character->GetCharacterMovement()->GroundFriction = CachedGroundFriction;
 	Character->GetCharacterMovement()->BrakingDecelerationWalking = CachedDeceleration;
 	Character->GetCharacterMovement()->MaxWalkSpeed =  Character->GetCachedInternalMovementSpeed();
-
+	NextState = EMovementState::Crouching;
 	if (SlideDirectionTask)
 		SlideDirectionTask->ExternalCancel();
 }
@@ -131,21 +146,11 @@ void USlidingState::OnStateTick_Implementation(float DeltaTime)
 	{
 		StateMachine->NextState();
 	}
-	if (bLookRotationIsLocked)
+
+	if (FASCVars::ASDebugDraw && FASCVars::ASDrawSlideVelocity)
 	{
-		UpdateBlockedRotation(DeltaTime);
+		const FVector Start = Character->GetActorLocation() + Character->GetActorForwardVector() * 50.f;
+		DrawDebugDirectionalArrow(GetWorld(), Start, Start + Character->GetCharacterMovement()->Velocity*.01f,
+			15.f, FColor::Blue, false, 0.f, 0.f, 1.f);
 	}
-}
-
-void USlidingState::UpdateBlockedRotation(float DeltaTime)
-{
-	LockedLookDuration += DeltaTime;
-	float LerpFactor = FMath::Clamp(LockedLookDuration / 1.f, 0.f, 1.f);
-	const FQuat FromQuat = Character->GetController()->GetControlRotation().Quaternion();
-	const FQuat ToQuat   = CachedVelocityDirection.ToOrientationRotator().Quaternion();
-
-	const FVector ResultDirection = FQuat::Slerp(FromQuat, ToQuat, LerpFactor).Vector();
-	const FRotator Result = FRotationMatrix::MakeFromXZ(ResultDirection, FVector::UpVector).Rotator();
-
-	Character->GetController()->SetControlRotation(Result);
 }

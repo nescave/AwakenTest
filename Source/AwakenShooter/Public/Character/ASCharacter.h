@@ -59,7 +59,7 @@ protected:
 	AGun* EquippedGun;
 	
 	UPROPERTY(BlueprintReadOnly, Category="Interaction")
-	class IInteractive* PossibleInteraction;
+	TObjectPtr<AActor> PossibleInteraction;
 	
 	// InputActions
 	UPROPERTY(EditAnywhere, Category ="Input")
@@ -76,6 +76,10 @@ protected:
 	UInputAction* WallRunAction;
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* InteractAction;
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* GunMainAction;
+	UPROPERTY(EditAnywhere, Category ="Input")
+	UInputAction* GunSecondaryAction;
 	UPROPERTY(EditAnywhere, Category ="Input")
 	UInputAction* ThrowAction;
 	UPROPERTY(EditAnywhere, Category ="Input")
@@ -108,14 +112,18 @@ protected:
 	void HandleSprintInput(const FInputActionValue& Value);
 	void HandleWallRunInput(const FInputActionValue& Value);
 	void HandleInteractInput(const FInputActionValue& Value);
+	void HandleGunMainInput(const FInputActionValue& Value);
+	void HandleGunSecondaryInput(const FInputActionValue& Value);
 	void HandleThrowInput(const FInputActionValue& Value);
 	void HandleReloadInput(const FInputActionValue& Value);
 	
 protected:
 	void ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectToApply);
 	void ApplyStartupGameplayEffects();
-	bool TryFindInteraction(class IInteractive*& OutInteraction);
+	bool TryFindInteraction();
 
+	void SetPossibleInteraction(class IInteractable* NewInteraction);
+	IInteractable* GetPossibleInteraction() const;
 public:
 	virtual void Tick(float DeltaSeconds) override;
 	
@@ -133,7 +141,7 @@ public:
 	void ThrowEquipped();
 	
 	UFUNCTION(BlueprintCallable, Category="Equipment")
-	AGun* GetEquippedGun() { return EquippedGun; }
+	AGun* GetEquippedGun() const { return EquippedGun; }
 	
 	// General Getters
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Character")

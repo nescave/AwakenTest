@@ -16,4 +16,6 @@ class AWAKENSHOOTER_API UWalkingState : public UMovementStateBase
 	
 public:
 	UWalkingState();
+
+	virtual void HandleReload(const FInputActionValue& Value) override;
 };

@@ -12,6 +12,7 @@
 #include "Character/MovementState/MovementStateComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Items/Gun.h"
 
 void UMovementStateBase::SetStateLocked(bool bInLocked)
 {
@@ -148,12 +149,32 @@ void UMovementStateBase::HandleSprint(const FInputActionValue& Value)
 	}
 }
 
+void UMovementStateBase::HandleGunMain(const FInputActionValue& Value)
+{
+	if (!Character->GetEquippedGun())
+	{
+		return;
+	}
+	Character->GetEquippedGun()->MainAction();
+}
+
+void UMovementStateBase::HandleGunSecondary(const FInputActionValue& Value)
+{
+	if (!Character->GetEquippedGun())
+	{
+		return;
+	}
+	Character->GetEquippedGun()->SecondaryAction();
+}
+
 void UMovementStateBase::HandleReload(const FInputActionValue& Value)
 {
+	
 }
 
 void UMovementStateBase::HandleThrow(const FInputActionValue& Value)
 {
+	
 }
 
 FVector UMovementStateBase::GetJumpDirection()

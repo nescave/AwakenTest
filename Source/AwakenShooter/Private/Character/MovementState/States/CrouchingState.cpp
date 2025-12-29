@@ -15,12 +15,6 @@ UCrouchingState::UCrouchingState()
 	TargetCapsuleHalfHeight = 30.f;
 }
 
-void UCrouchingState::HandleCrouch(const FInputActionValue& Value)
-{
-	Super::HandleCrouch(Value);
-	StateMachine->NextState();
-}
-
 void UCrouchingState::OnEnterState_Implementation()
 {
 	Super::OnEnterState_Implementation();
@@ -29,4 +23,18 @@ void UCrouchingState::OnEnterState_Implementation()
 void UCrouchingState::OnExitState_Implementation()
 {
 	Super::OnExitState_Implementation();
+}
+
+void UCrouchingState::HandleCrouch(const FInputActionValue& Value)
+{
+	Super::HandleCrouch(Value);
+	StateMachine->NextState();
+}
+
+void UCrouchingState::HandleReload(const FInputActionValue& Value)
+{
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FGameplayTags::Ability_Reload));
+	}
 }

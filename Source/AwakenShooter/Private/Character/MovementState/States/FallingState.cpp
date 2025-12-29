@@ -3,6 +3,7 @@
 
 #include "Character/MovementState/States/FallingState.h"
 
+#include "AbilitySystem/GameplayTags.h"
 #include "Character/ASCharacter.h"
 #include "Character/MovementState/MovementStateComponent.h"
 #include "Character/MovementState/States/HangingState.h"
@@ -29,6 +30,13 @@ void UFallingState::OnEnterState_Implementation()
 {
 	Super::OnEnterState_Implementation();
 	SetTickEnabled(true);
+	
+	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	{
+		// cancel reload ability
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FGameplayTags::Ability_Reload);		
+		ASC->CancelAbilities(&CancelAbilitiesTags);
+	}
 }
 
 void UFallingState::OnExitState_Implementation()

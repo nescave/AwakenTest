@@ -20,7 +20,7 @@ class AWAKENSHOOTER_API USlidingState : public UMovementStateBase
 	FVector CachedVelocityDirection;
 	float VelocitySquaredNeededToExitSlide;
 
-	
+	bool MoveForwardPressed;
 	float LastRightInput;
 
 	UPROPERTY()
@@ -44,7 +44,6 @@ public:
 	virtual void OnStateTick_Implementation(float DeltaTime) override;
 
 private:
-	void UpdateBlockedRotation(float DeltaTime);
 	float LockedLookDuration;
 	bool bLookRotationIsLocked;
 };

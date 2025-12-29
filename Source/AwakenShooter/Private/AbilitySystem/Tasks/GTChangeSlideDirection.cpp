@@ -35,7 +35,6 @@ void UGTChangeSlideDirection::TickTask(float DeltaTime)
 	FVector TargetVelocityDirection =
 		FMath::Lerp(Character->GetCharacterMovement()->Velocity.GetSafeNormal(), TargetDirection, LerpFactor);
 
-	
 	float VelocityMagnitude = Character->GetCharacterMovement()->Velocity.Length();
 	Character->GetCharacterMovement()->Velocity = TargetVelocityDirection * VelocityMagnitude;
 	

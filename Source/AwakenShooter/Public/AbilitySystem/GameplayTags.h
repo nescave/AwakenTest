@@ -17,6 +17,8 @@ namespace FGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Falling);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Hanging);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Sliding);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Reloading);
+	
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Health_Regen);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Energy_Regen);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Damage_Instant);
@@ -35,7 +37,19 @@ namespace FGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Fire);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Hit);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Throw);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Reload);
 
+	// Events
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Event_FinishedReloading);
+
+	// Cooldown
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Cooldown_Fire);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Effect_Cooldown_Hit);
+	
 	// Data
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_JumpCost);
+
+	// Cues
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(GameplayCue_Gun_MuzzleFlare0);
+	
 };
