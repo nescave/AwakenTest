@@ -40,7 +40,7 @@ bool UMovementStateComponent::ChangeState(EMovementState NewState, bool bForce, 
 	{
 		if ( (GetCurrentStateID() == NewState || CurrentState->IsLocked()) && !bForce)
 		{
-			UE_LOG(LogAwakenShooter, Warning, TEXT("Movement state wasn't changed but it is still in a valid state"));
+			// UE_LOG(LogAwakenShooter, Warning, TEXT("Movement state wasn't changed but it is still in a valid state"));
 			PrimaryComponentTick.SetTickFunctionEnable(true);
 			return true;
 		}
@@ -50,7 +50,7 @@ bool UMovementStateComponent::ChangeState(EMovementState NewState, bool bForce, 
 	if (!NewStateInstance)
 	{
 		const FString StateName = StaticEnum<EMovementState>()->GetNameByValue(static_cast<int64>(NewState)).ToString();
-		UE_LOG(LogAwakenShooter, Warning, TEXT("Failed to find movement state %s. State not changed."), *StateName);
+		// UE_LOG(LogAwakenShooter, Warning, TEXT("Failed to find movement state %s. State not changed."), *StateName);
 		return false;
 	}
 

@@ -2,6 +2,7 @@
 
 #include "General/ASGameMode.h"
 
+#include "General/ASGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
 AASGameMode::AASGameMode() :
@@ -9,7 +10,6 @@ AASGameMode::AASGameMode() :
 	RoundStartTime(0.f),
 	RoundEndTime(0.f),
 	bRoundWon(false),
-	RoundNumber(0),
 	BestRoundTime(0.f),
 	RemainingEnemies(0)
 {}
@@ -26,6 +26,11 @@ void AASGameMode::BeginPlay()
 	OnEnemyKilledDelegate.AddDynamic(this, &AASGameMode::OnEnemyKilled);
 	OnLateInitDelegate.AddDynamic(this, &AASGameMode::OnLateInit);
 	ResetRound();
+
+	if (UASGameInstance* GI = Cast<UASGameInstance>(GetGameInstance()))
+	{
+		BestRoundTime = GI->InstanceBestRoundTime;
+	}
 }
 
 void AASGameMode::LateInit()
@@ -40,7 +45,6 @@ void AASGameMode::Tick(float DeltaSeconds)
 
 void AASGameMode::OnRoundReset_Implementation()
 {
-	RoundNumber++;
 	GetWorldTimerManager().SetTimer(OnLateInitHandle, this, &AASGameMode::LateInit, 1.0f, false);
 }
 
@@ -62,9 +66,17 @@ void AASGameMode::OnRoundEnd_Implementation()
 
 void AASGameMode::OnRoundWin_Implementation()
 {
-	if (RoundStartTime > BestRoundTime)
+	if (BestRoundTime == .0)
 	{
-		BestRoundTime = RoundStartTime;
+		BestRoundTime = GetRoundTime();
+	}
+	else
+	{
+		BestRoundTime = FMath::Min(BestRoundTime, GetRoundTime());
+	}
+	if (UASGameInstance* GI = Cast<UASGameInstance>(GetGameInstance()))
+	{
+		GI->InstanceBestRoundTime = BestRoundTime;
 	}
 	OnRoundEndDelegate.Broadcast();
 }
@@ -114,11 +126,13 @@ void AASGameMode::WinRound()
 {
 	bRoundWon = true;
 	EndRound();
+	OnRoundWinDelegate.Broadcast();
 }
 
 void AASGameMode::LoseRound()
 {
 	EndRound();
+	OnRoundLoseDelegate.Broadcast();
 }
 
 void AASGameMode::PlayerDeath()

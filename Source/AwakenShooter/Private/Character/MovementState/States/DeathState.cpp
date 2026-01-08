@@ -36,7 +36,7 @@ void UDeathState::OnEnterState_Implementation()
 				ThrowDirection = (BotCharacter->GetTargetPosition() + BotCharacter->GetTarget()->GetVelocity() * .5f - Character->GetActorLocation()).GetSafeNormal();
 			}
 		}
-		Character->GetEquippedGun()->Throw(ThrowDirection * 900.f);
+		Character->GetEquippedGun()->Throw(ThrowDirection * 350.f);
 	}
 
 	if (auto ASC = Character->GetAbilitySystemComponent())

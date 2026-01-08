@@ -26,8 +26,6 @@ protected:
 	double RoundEndTime;
 	UPROPERTY(BlueprintReadWrite, Category = "GameData")
 	bool bRoundWon;
-	UPROPERTY(BlueprintReadWrite, Category = "GameData")
-	int32 RoundNumber;
 	
 public:
 	AASGameMode();
@@ -40,12 +38,11 @@ protected:
 public:
 	virtual void Tick(float DeltaSeconds) override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GameData")
+	UPROPERTY(BlueprintReadWrite, Category = "GameData")
 	double BestRoundTime;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "GameData")
+	UPROPERTY(BlueprintReadWrite, Category = "GameData")
 	int32 RemainingEnemies;
-
 
 	UPROPERTY(BlueprintAssignable, Category = "GameEvents")
 	FOnGameEvent OnRoundResetDelegate;
