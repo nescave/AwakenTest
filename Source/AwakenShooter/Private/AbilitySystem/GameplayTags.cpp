@@ -6,49 +6,104 @@
 namespace FASGameplayTags
 {
 	// Gameplay effects
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Walking, "Effect.Walking");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Sprint, "Effect.Sprint");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Crouch, "Effect.Crouch");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Falling, "Effect.Falling");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Hanging, "Effect.Hanging");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Sliding, "Effect.Sliding");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Reloading, "Effect.Reloading");
+	namespace Effect
+	{
+		UE_DEFINE_GAMEPLAY_TAG(Walking, "Effect.Walking");
+		UE_DEFINE_GAMEPLAY_TAG(Sprint, "Effect.Sprint");
+		UE_DEFINE_GAMEPLAY_TAG(SprintEaseOut, "Effect.SprintEaseOut");
+		UE_DEFINE_GAMEPLAY_TAG(Crouch, "Effect.Crouch");
+		UE_DEFINE_GAMEPLAY_TAG(Falling, "Effect.Falling");
+		UE_DEFINE_GAMEPLAY_TAG(Hanging, "Effect.Hanging");
+		UE_DEFINE_GAMEPLAY_TAG(Sliding, "Effect.Sliding");
+		UE_DEFINE_GAMEPLAY_TAG(Reloading, "Effect.Reloading");
+		UE_DEFINE_GAMEPLAY_TAG(Health_Regen, "Effect.Health.Regen");
+		UE_DEFINE_GAMEPLAY_TAG(Energy_Regen, "Effect.Energy.Regen");
+		UE_DEFINE_GAMEPLAY_TAG(Energy_Drain, "Effect.Energy.Drain");
+		UE_DEFINE_GAMEPLAY_TAG(Damage_Instant, "Effect.Damage.Instant");
+		UE_DEFINE_GAMEPLAY_TAG(ADS, "Effect.ADS");
+		UE_DEFINE_GAMEPLAY_TAG(Stunned, "Effect.Stunned");
+		UE_DEFINE_GAMEPLAY_TAG(Damage, "Effect.Damage");
+
+	}
 	
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Health_Regen, "Effect.Health.Regen");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Energy_Regen, "Effect.Energy.Regen");
-	UE_DEFINE_GAMEPLAY_TAG(Effect_Damage_Instant, "Effect.Damage.Instant");
-		
 	// Character states
-	UE_DEFINE_GAMEPLAY_TAG(MovementState_Sprinting, "MovementState.Sprinting");
-	UE_DEFINE_GAMEPLAY_TAG(MovementState_Crouching, "MovementState.Crouching");
-	UE_DEFINE_GAMEPLAY_TAG(MovementState_Falling, "MovementState.Falling");
-	UE_DEFINE_GAMEPLAY_TAG(MovementState_Sliding, "MovementState.Sliding");
-	UE_DEFINE_GAMEPLAY_TAG(MovementState_Hanging, "MovementState.Hanging");
+	namespace MovementState
+	{
+		UE_DEFINE_GAMEPLAY_TAG(Sprinting, "MovementState.Sprinting");
+		UE_DEFINE_GAMEPLAY_TAG(Crouching, "MovementState.Crouching");
+		UE_DEFINE_GAMEPLAY_TAG(Falling, "MovementState.Falling");
+		UE_DEFINE_GAMEPLAY_TAG(Sliding, "MovementState.Sliding");
+		UE_DEFINE_GAMEPLAY_TAG(Hanging, "MovementState.Hanging");
+		UE_DEFINE_GAMEPLAY_TAG(Death, "MovementState.Death");
+	}
 
 	// Gameplay abilities
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Jump, "Ability.Jump");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_ClamberUp, "Ability.ClamberUp");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Slide, "Ability.Slide");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Fire, "Ability.Fire");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Hit, "Ability.Hit");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Throw, "Ability.Throw");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Reload, "Ability.Reload");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Main, "Ability.Main");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Secondary, "Ability.Secondary");
-	
+	namespace Ability
+	{
+		UE_DEFINE_GAMEPLAY_TAG(Jump, "Ability.Jump");
+		UE_DEFINE_GAMEPLAY_TAG(Sprint, "Ability.Sprint");
+		UE_DEFINE_GAMEPLAY_TAG(ClamberUp, "Ability.ClamberUp");
+		UE_DEFINE_GAMEPLAY_TAG(Slide, "Ability.Slide");
+		UE_DEFINE_GAMEPLAY_TAG(Fire, "Ability.Fire");
+		UE_DEFINE_GAMEPLAY_TAG(Hit, "Ability.Hit");
+		UE_DEFINE_GAMEPLAY_TAG(Throw, "Ability.Throw");
+		UE_DEFINE_GAMEPLAY_TAG(Reload, "Ability.Reload");
+		UE_DEFINE_GAMEPLAY_TAG(Main, "Ability.Main");
+		UE_DEFINE_GAMEPLAY_TAG(Secondary, "Ability.Secondary");
+		UE_DEFINE_GAMEPLAY_TAG(AimDownSights, "Ability.AimDownSights");
+		UE_DEFINE_GAMEPLAY_TAG(Melee, "Ability.Melee");
+		UE_DEFINE_GAMEPLAY_TAG(DryFire, "Ability.DryFire");
+		UE_DEFINE_GAMEPLAY_TAG(EquipGun, "Ability.EquipGun");
+		UE_DEFINE_GAMEPLAY_TAG(BulletTime, "Ability.BulletTime");
+		UE_DEFINE_GAMEPLAY_TAG(BulletTimeActive, "Ability.BulletTime.Active");
+		UE_DEFINE_GAMEPLAY_TAG(SetSlowMotion, "Ability.SetSlowMotion");
+		UE_DEFINE_GAMEPLAY_TAG(UnsetSlowMotion, "Ability.UnsetSlowMotion");
+
+		// Events
+		namespace Event
+		{
+			UE_DEFINE_GAMEPLAY_TAG(FinishedReloading, "Ability.Event.FinishedReloading");
+			UE_DEFINE_GAMEPLAY_TAG(FinishedADS, "Ability.Event.FinishedADS");
+			UE_DEFINE_GAMEPLAY_TAG(ActivatedHitBox, "Ability.Event.ActivatedHitBox");
+			UE_DEFINE_GAMEPLAY_TAG(DeactivatedHitBox, "Ability.Event.DeactivatedHitBox");
+			UE_DEFINE_GAMEPLAY_TAG(GunEquipped, "Ability.Event.GunEquipped");
+			UE_DEFINE_GAMEPLAY_TAG(BulletTimeStarted, "Ability.Event.BulletTimeStarted");
+			UE_DEFINE_GAMEPLAY_TAG(BulletTimeEnded, "Ability.Event.BulletTimeEnded");
+			UE_DEFINE_GAMEPLAY_TAG(Throw, "Ability.Event.Throw");
+
+		}
+	}
+
 	// Events
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Event_FinishedReloading, "Ability.Event.FinishedReloading");
+	namespace Event
+	{
+		UE_DEFINE_GAMEPLAY_TAG(Hit, "Event.Hit");
+	}
 	
 	// Cooldown
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Cooldown_Fire, "Effect.Cooldown.Fire");
 	UE_DEFINE_GAMEPLAY_TAG(Effect_Cooldown_Hit, "Effect.Cooldown.Hit");
 	
 	// Data
-	UE_DEFINE_GAMEPLAY_TAG(Data_JumpCost, "Data.JumpCost");
+	namespace Data
+	{
+		UE_DEFINE_GAMEPLAY_TAG(JumpCost, "Data.JumpCost");
+		UE_DEFINE_GAMEPLAY_TAG(StunDuration, "Data.StunDuration");
+		UE_DEFINE_GAMEPLAY_TAG(Damage, "Data.Damage");
+	}
 
 	// Cues
-	UE_DEFINE_GAMEPLAY_TAG(GameplayCue_Gun_MuzzleFlare0, "GameplayCue.Gun.MuzzleFlare0");
-
-	
-	
+	namespace GameplayCue
+	{
+		namespace Gun
+		{
+			UE_DEFINE_GAMEPLAY_TAG(MuzzleFlare0, "GameplayCue.Gun.MuzzleFlare0");
+			UE_DEFINE_GAMEPLAY_TAG(Melee, "GameplayCue.Gun.Melee");
+		}
+		namespace Hit
+		{
+			UE_DEFINE_GAMEPLAY_TAG(MeleeImpact, "GameplayCue.Hit.MeleeImpact");
+			UE_DEFINE_GAMEPLAY_TAG(BulletImpact, "GameplayCue.Hit.BulletImpact");
+		}
+	}
 }

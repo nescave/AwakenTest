@@ -21,7 +21,7 @@ namespace FASCVars
 	int32 ASDrawDetailWallRun = 1;
 	static FAutoConsoleVariableRef CVarDrawDetailWallRun(TEXT("AS.DebugDraw.DetailWallRun"),ASDrawDetailWallRun,
 		TEXT("Draw wall run detail."), ECVF_Default);
-	int32 ASDrawWallCatchTests = 1;
+	int32 ASDrawWallCatchTests = 0;
 	static FAutoConsoleVariableRef CVarDrawWallCatchTests(TEXT("AS.DebugDraw.WallCatchTests"),ASDrawWallCatchTests,
 		TEXT("Draw wall catch tests."), ECVF_Default);
 	int32 ASDrawHangingPoint = 1;
@@ -36,10 +36,33 @@ namespace FASCVars
 	int32 ASDrawShotTraces = 1;
 	static FAutoConsoleVariableRef CVarDrawShotTraces(TEXT("AS.DebugDraw.ShotTraces"),ASDrawShotTraces,
 		TEXT("Draw shot traces."), ECVF_Default);
-	int32 ASDrawInteractionsZone = 1;
+	int32 ASDrawInteractionsZone = 0;
 	static FAutoConsoleVariableRef CVarDrawInteractionsZone(TEXT("AS.DebugDraw.InteractionsZone"),ASDrawInteractionsZone,
 		TEXT("Draw interactions zone."), ECVF_Default);
 	int32 ASDrawDetailedInteractions = 1;
 	static FAutoConsoleVariableRef CVarDrawDetailedInteractions(TEXT("AS.DebugDraw.DetailedInteractions"),ASDrawDetailedInteractions,
 		TEXT("Draw detailed interactions."), ECVF_Default);
+	int32 ASDrawVelocityClamping = 0;
+	static FAutoConsoleVariableRef CVarDrawVelocityClamping(TEXT("AS.DebugDraw.VelocityClamping"),ASDrawVelocityClamping,
+		TEXT("Draw velocity clamping."), ECVF_Default);
+	int32 ASDrawBotTargeting = 0;
+	static FAutoConsoleVariableRef CVarDrawBotTargeting(TEXT("AS.DebugDraw.BotTargeting"),ASDrawBotTargeting,
+		TEXT("Draw bot targeting."), ECVF_Default);
+	int32 ASDrawBotPathfinding = 0;
+	static FAutoConsoleVariableRef CVarDrawBotPathfinding(TEXT("AS.DebugDraw.BotPathfinding"),ASDrawBotPathfinding,
+		TEXT("Draw bot pathfinding."), ECVF_Default);
+	int32 ASDrawFireCone = 0;
+	static FAutoConsoleVariableRef CVarDrawFireCone(TEXT("AS.DebugDraw.FireCone"),ASDrawFireCone,
+		TEXT("Draw fire cone."), ECVF_Default);
+	int32 ASDrawThrowTargeting = 0;
+	static FAutoConsoleVariableRef CVarDrawThrowTargeting(TEXT("AS.DebugDraw.ThrowTargeting"),ASDrawThrowTargeting,
+		TEXT("Draw throw targeting."), ECVF_Default);
+	int32 AILineOfSightTraces = 0;
+	static FAutoConsoleVariableRef CVarLineOfSight(TEXT("AS.AI.LineOfSightTraces"),AILineOfSightTraces,
+		TEXT("Line of sight check."), ECVF_Default);
+	
+	int32 ASGodMode = 0;
+	static FAutoConsoleVariableRef CVarGodMode(TEXT("AS.GodMode"), ASGodMode,
+			TEXT("GodMode. No damage taken."), ECVF_Default);
+ 
 }

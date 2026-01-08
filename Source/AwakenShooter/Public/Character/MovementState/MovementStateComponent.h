@@ -52,7 +52,9 @@ public:
 	void HandleGunSecondary(const FInputActionValue& Value);
 	void HandleThrow(const FInputActionValue& Value);
 	void HandleReload(const FInputActionValue& Value);
+	void HandleADS(const FInputActionValue& Value);
 
+	UMovementStateBase* GetStateFromMap(EMovementState StateID) const;
 	UMovementStateBase* GetCurrentState() const { return CurrentState; }
 	FOnMovementStateChanged& OnMovementStateChangedDelegate() { return OnMovementStateChanged; }
 	EMovementState GetCurrentStateID() const;

@@ -11,7 +11,7 @@
 
 UGAReload::UGAReload()
 {
-	SetAssetTags(FGameplayTagContainer(FGameplayTagContainer(FASGameplayTags::Ability_Reload)));
+	SetAssetTags(FGameplayTagContainer(FGameplayTagContainer(FASGameplayTags::Ability::Reload)));
 }
 
 void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -19,19 +19,19 @@ void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	
 	Character = Cast<AASCharacter>(ActorInfo->AvatarActor.Get());
 	if (!Character)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	if (!Character->GetEquippedGun())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
@@ -39,7 +39,7 @@ void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 
 	UAbilityTask_WaitGameplayEvent* Task = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
-		FASGameplayTags::Ability_Event_FinishedReloading);
+		FASGameplayTags::Ability::Event::FinishedReloading);
 
 	Task->EventReceived.AddDynamic(
 		this,
@@ -87,15 +87,12 @@ void UGAReload::OnFinishedReloading(FGameplayEventData)
 
 void UGAReload::PlayReloadAnimation()
 {
-	if (UAnimInstance* Anim = Character->GetFirstPersonMesh()->GetAnimInstance())
-	{
-		UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 
-		ASC->PlayMontage(
-			this,
-			CurrentActivationInfo,
-			ReloadMontage,
-			1.0f
-		);
-	}
+	ASC->PlayMontage(
+		this,
+		CurrentActivationInfo,
+		Character->GetEquippedGun()->GetReloadMontage(),
+		1.0f
+	);
 }

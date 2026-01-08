@@ -13,7 +13,7 @@
 
 UGAClamberUp::UGAClamberUp()
 {
-	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_ClamberUp));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability::ClamberUp));
 }
 
 void UGAClamberUp::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -29,9 +29,13 @@ void UGAClamberUp::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement();
 	if (const UHangingState* State = Cast<UHangingState>(Character->GetMovementStateMachine()->GetCurrentState()))
 	{
-		UGTClamberUp::Create(Character->GetGameplayTasksComponent(),
-		   State->GetHangingPoint().Location - State->GetHangingPoint().Normal * 50.f,
-		   Character, .35f)->ReadyForActivation();
+		FHitResult HangingPoint;
+		if (State->GetHangingPoint(HangingPoint) && HangingPoint.bBlockingHit)
+		{
+			UGTClamberUp::Create(Character->GetGameplayTasksComponent(),
+				HangingPoint.Location - HangingPoint.Normal * 50.f,Character,
+				.35f)->ReadyForActivation();
+		}
 	}
 	MoveComp->Velocity += FVector::UpVector * 1400.f;
 	MoveComp->SetMovementMode(MOVE_Falling);

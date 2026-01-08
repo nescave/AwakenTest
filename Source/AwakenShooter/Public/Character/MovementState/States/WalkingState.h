@@ -18,4 +18,5 @@ public:
 	UWalkingState();
 
 	virtual void HandleReload(const FInputActionValue& Value) override;
+	virtual void HandleCrouch(const FInputActionValue& Value) override;
 };

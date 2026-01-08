@@ -3,25 +3,33 @@
 
 #include "Items/Gun.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AwakenShooter.h"
 #include "AbilitySystem/GameplayTags.h"
 #include "AbilitySystem/GunAttributeSet.h"
 #include "Character/ASCharacter.h"
+#include "General/ProjectGlobals.h"
 
-AGun::AGun()
+AGun::AGun() :
+	SocketName(FName("HandGrip_Rifle")),
+	DefaultGunPosition(2.f, 1.f,-194.f),
+	bThrown(false)
 {
 	PrimaryActorTick.bCanEverTick = true;
 	
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	RootComponent = Mesh;
-	Mesh->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::FirstPerson;
-	Mesh->SetCollisionObjectType(ECC_WorldDynamic);
-	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	Mesh->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Overlap);
+	WorldMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WorldMesh"));
+	SetRootComponent(WorldMesh);
 
-	Mesh->SetSimulatePhysics(false);
+	WorldMesh->SetCollisionProfileName(ASCollisionProfile::Gun_ProfileName);
+	WorldMesh->SetSimulatePhysics(false);
 
+	FPSMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FPSMesh"));
+	FPSMesh->SetupAttachment(WorldMesh);
+	FPSMesh->SetFirstPersonPrimitiveType(EFirstPersonPrimitiveType::FirstPerson);
+	FPSMesh->SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
+	SetFPSMode(false);
+	
 	GunAbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("GunAbilitySystemComponent"));
 	GunAbilitySystemComponent->SetIsReplicated(false); // <- No Multiplayer :(
 
@@ -38,7 +46,8 @@ void AGun::InitializeAttributes()
 		return;
 	}
 	GunAbilitySystemComponent->ApplyGameplayEffectToSelf(
-			AttributeDefaults->GetDefaultObject<UGameplayEffect>(), 1.f, GunAbilitySystemComponent->MakeEffectContext());}
+		AttributeDefaults->GetDefaultObject<UGameplayEffect>(), 1.f, GunAbilitySystemComponent->MakeEffectContext());
+}
 
 void AGun::BeginPlay()
 {
@@ -59,89 +68,225 @@ void AGun::BeginPlay()
 	}
 	if (GunAbilitySystemComponent)
 	{
-		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue_Gun_MuzzleFlare0);
-	}
-}
-
-void AGun::Reload()
-{
-	GunAbilitySystemComponent->BP_ApplyGameplayEffectToSelf(ReloadEffect, 0.f, GunAbilitySystemComponent->MakeEffectContext());
-}
-
-void AGun::Throw(const FVector& ForceVector)
-{
-	if (!Mesh)
-	{
-		return;
-	}
-	
-	Drop();
-	Mesh->AddImpulse(ForceVector*30.f);
-}
-
-void AGun::Drop()
-{
-	if (GunHolder)
-	{
-		RemoveEffects(GunHolder->GetAbilitySystemComponent());
-		GunHolder = nullptr;
-	}
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-	Mesh->SetSimulatePhysics(true);
-	Mesh->WakeRigidBody();
-	SetActorEnableCollision(true);
-	SetActorTickEnabled(true);
-}
-
-void AGun::MainAction()
-{
-	if (!MainActionAbility)
-	{
-		return;
-	}
-	GunAbilitySystemComponent->TryActivateAbilityByClass(MainActionAbility);
-}
-
-void AGun::SecondaryAction()
-{
-	if (!SecondaryActionAbility)
-	{
-		return;
-	}
-	GunAbilitySystemComponent->TryActivateAbilityByClass(SecondaryActionAbility);
-}
-
-void AGun::Interact(AASCharacter* Interactor)
-{
-	if (!Interactor)
-	{
-		return;
-	}
-	Interactor->EquipGun(this);
-}
-
-void AGun::SetHighlighted(float HighlightValue)
-{
-	Mesh->SetCustomPrimitiveDataFloat(0, HighlightValue);
-}
-
-void AGun::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-	if (!Mesh)
-		return;
-	
-	if (Mesh->IsSimulatingPhysics() && !Mesh->RigidBodyIsAwake())
-	{
-		Mesh->SetSimulatePhysics(false);
-		SetActorTickEnabled(false);
+		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue::Gun::MuzzleFlare0);
+		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue::Gun::Melee);
+		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue::Hit::MeleeImpact);
+		GunAbilitySystemComponent->AddGameplayCue(FASGameplayTags::GameplayCue::Hit::BulletImpact);
 	}
 }
 
 void AGun::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
+	FPSMesh->SetStaticMesh(WorldMesh->GetStaticMesh());
+}
 
+void AGun::Reload()
+{
+	GunAbilitySystemComponent->BP_ApplyGameplayEffectToSelf(ReloadEffect, 0.f, GunAbilitySystemComponent->MakeEffectContext());
+	OnGunReloaded.Broadcast();
+}
+
+void AGun::Throw(const FVector& ThrowVector)
+{
+	if (!WorldMesh)
+	{
+		return;
+	}
+	if (GunHolder && GunHolder->IsPlayerControlled())
+	{
+		Thrower = GunHolder;
+		bThrown = true;
+		SetIgnoreEnemiesCollision(false);
+		WorldMesh->OnComponentHit.AddDynamic(this, &AGun::OnHitOther);
+	}
+	Drop(false);
+	WorldMesh->SetPhysicsAngularVelocityInRadians(FVector::ZeroVector);
+	WorldMesh->SetPhysicsLinearVelocity(ThrowVector);
+}
+
+void AGun::Drop(bool bStopAllMovement)
+{
+	if (GunHolder)
+	{
+		RemoveEffects(GunHolder->GetAbilitySystemComponent());
+		GunHolder->SetEquippedGun(nullptr);
+		GunHolder = nullptr;
+	}
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	WorldMesh->SetSimulatePhysics(true);
+	WorldMesh->WakeRigidBody();
+	SetActorEnableCollision(true);
+	SetActorTickEnabled(true);
+	SetFPSMode(false);
+	if (bStopAllMovement)
+	{
+		WorldMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+		WorldMesh->SetPhysicsAngularVelocityInRadians(FVector::ZeroVector);
+	}
+}
+
+bool AGun::MainAction()
+{
+	if (!MainActionAbility)
+	{
+		return false;
+	}
+	return GunAbilitySystemComponent->TryActivateAbilityByClass(MainActionAbility);
+}
+
+bool AGun::SecondaryAction()
+{
+	if (!SecondaryActionAbility)
+	{
+		return false;
+	}
+	return GunAbilitySystemComponent->TryActivateAbilityByClass(SecondaryActionAbility);
+}
+
+void AGun::SetIgnoreEnemiesCollision(bool bIgnoreCharacters)
+{
+	if (bIgnoreCharacters)
+	{
+		WorldMesh->SetCollisionResponseToChannel(ASTraceChannel::Enemy, ECR_Block);
+	}
+	else
+	{
+		WorldMesh->SetCollisionResponseToChannel(ASTraceChannel::Enemy, ECR_Block);
+	}
+}
+
+void AGun::SetFPSMode(bool bFPSVisible)
+{
+	WorldMesh->SetVisibility(!bFPSVisible);
+	FPSMesh->SetVisibility(bFPSVisible);
+}
+
+float AGun::GetBaseDamage() const
+{
+	return GunAttributeSet->GetDamage();
+}
+
+float AGun::GetBaseFireRate() const
+{
+	return GunAttributeSet->GetFireRate();
+}
+
+float AGun::GetBaseRecoilVertical() const
+{
+	return GunAttributeSet->GetRecoilVertical();
+}
+
+float AGun::GetBaseRecoilHorizontal() const
+{
+	return GunAttributeSet->GetRecoilHorizontal();
+}
+
+float AGun::GetBaseAmmo() const
+{
+	return GunAttributeSet->GetAmmo();
+}
+
+float AGun::GetBaseMaxAmmo() const
+{
+	return GunAttributeSet->GetMaxAmmo();
+}
+
+float AGun::GetBaseAccuracy() const
+{
+	return GunAttributeSet->GetAccuracy();
+}
+
+float AGun::GetBaseShotsPerRound() const
+{
+	return GunAttributeSet->GetShotsPerRound();
+}
+
+float AGun::GetBaseMaxSpread() const
+{
+	return GunAttributeSet->GetMaxSpread();
+}
+
+void AGun::OnHitOther(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (OtherActor == Thrower)
+		return;
+
+	AASCharacter* OtherCharacter = Cast<AASCharacter>(OtherActor);
+	if (!OtherCharacter)
+		return;
+
+	if (GetVelocity().Size() < 100.f)
+		return;
+
+	if (ThrowHitEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = GetGunAbilitySystemComponent()->MakeEffectContext();
+		EffectContext.AddSourceObject(this);
+		EffectContext.AddHitResult(Hit);
+		FGameplayEventData EventData;
+		EventData.EventTag = FASGameplayTags::Event::Hit;
+		EventData.Instigator = Thrower;
+		EventData.Target = OtherActor;
+		EventData.ContextHandle = EffectContext;
+		EventData.EventMagnitude = GetVelocity().Size() * .15f;
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OtherCharacter, FASGameplayTags::Event::Hit, EventData);
+
+		FGameplayEffectSpec Spec = FGameplayEffectSpec(ThrowHitEffect.GetDefaultObject(), EffectContext);
+		const float Damage = FMath::Clamp(EventData.EventMagnitude, 0.f, 50.f);
+		Spec.SetSetByCallerMagnitude(FASGameplayTags::Data::Damage, Damage);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Damage: ") + FString::SanitizeFloat(Damage));
+		OtherCharacter->Stun(EventData.EventMagnitude * .5f);
+		GetGunAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(Spec, OtherCharacter->GetAbilitySystemComponent());
+
+		WorldMesh->OnComponentHit.RemoveDynamic(this, &AGun::OnHitOther);
+	}
+}
+
+void AGun::Interact_Implementation(AASCharacter* Interactor)
+{
+	if (!Interactor)
+	{
+		return;
+	}
+	Interactor->TryActivateAbilityByTag(FASGameplayTags::Ability::EquipGun);
+}
+
+void AGun::SetHighlighted_Implementation(float HighlightValue)
+{
+	WorldMesh->SetCustomPrimitiveDataFloat(0, HighlightValue);
+}
+
+bool AGun::IsInteractable_Implementation() const
+{
+	if (!GunHolder && !bThrown)
+		return true;
+	return false;
+}
+
+void AGun::TryClearRigidbody()
+{
+	if (WorldMesh->IsSimulatingPhysics() && !WorldMesh->RigidBodyIsAwake())
+	{
+		WorldMesh->SetSimulatePhysics(false);
+		SetActorTickEnabled(false);
+	}
+	if (IsOnGround())
+	{
+		bThrown = false;
+		Thrower = nullptr;
+		WorldMesh->OnComponentHit.RemoveAll(this);
+		SetIgnoreEnemiesCollision(false);
+	}
+}
+
+void AGun::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	if (!WorldMesh)
+		return;
+	
+	TryClearRigidbody();
 }
 
 void AGun::SetGunHolder(AASCharacter* NewHolder)
@@ -158,15 +303,37 @@ void AGun::SetGunHolder(AASCharacter* NewHolder)
 	{
 		return;
 	}
+	
 	GunHolder = NewHolder;
+	if (GunHolder->IsPlayerControlled())
+		SetFPSMode(true);
+	
 	GetMeshComponent()->SetSimulatePhysics(false);
 	GetMeshComponent()->SetPhysicsLinearVelocity(FVector::ZeroVector);
 	GetMeshComponent()->SetPhysicsAngularVelocityInRadians(FVector::ZeroVector);
 	GetMeshComponent()->PutRigidBodyToSleep();
 	SetActorEnableCollision(false);
 	ApplyEffects(NewHolder->GetAbilitySystemComponent());
-	AttachToComponent(
-		NewHolder->GetFirstPersonMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TEXT("HandGrip_R"));
+	AttachToComponent(NewHolder->GetVisibleMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, GetSocketName());
+	WorldMesh->OnComponentHit.RemoveAll(this);
+}
+
+UAnimMontage* AGun::GetFireMontage() const
+{
+	if (GetGunAttributes()->GetAmmo() < 0.f)
+		return DryFireMontage;
+
+	return FireMontage;
+}
+
+bool AGun::IsAmmoFull() const
+{
+	return GetGunAttributes()->GetAmmo() == GetGunAttributes()->GetMaxAmmo();
+}
+
+bool AGun::IsAmmoEmpty() const
+{
+	return GetGunAttributes()->GetAmmo() == 0.f;
 }
 
 void AGun::ApplyEffects(UAbilitySystemComponent* ASC)
@@ -201,9 +368,8 @@ bool AGun::IsOnGround()
 	FHitResult HitResult;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
-	if (GetWorld()->SweepSingleByChannel(HitResult, GetActorLocation(), GetActorLocation(), 
-		GetActorRotation().Quaternion(), ECC_Visibility, 
-		FCollisionShape::MakeCapsule(5.f, 15.f),Params))
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, GetActorLocation(), GetActorLocation()
+		- FVector::UpVector * 25.f, ECC_Visibility, Params))
 	{
 		return true;
 	}

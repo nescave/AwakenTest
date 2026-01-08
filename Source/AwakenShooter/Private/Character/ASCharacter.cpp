@@ -6,26 +6,27 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
-#include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AwakenShooter.h"
 #include "AbilitySystem/CharacterAttributeSet.h"
+#include "AbilitySystem/GameplayTags.h"
 #include "Character/MovementState/MovementStateComponent.h"
-#include "Engine/OverlapResult.h"
+#include "General/ASGameMode.h"
 #include "General/DebugCVars.h"
 #include "Items/Gun.h"
-#include "Items/Interactable.h"
+#include "Kismet/GameplayStatics.h"
 
-AASCharacter::AASCharacter()
-	: CachedInternalMovementSpeed(100.f)
+AASCharacter::AASCharacter() :
+	CachedInternalMovementSpeed(100.f)
 {
 	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
-
+	GetCapsuleComponent()->SetCapsuleSize(34.f, 96.0f);
+	GetCapsuleComponent()->SetCapsuleSize(34.0f, 96.0f);
+	
 	// Create the Camera Component	
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("First Person Camera"));
-	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
-	FirstPersonCameraComponent->SetRelativeLocationAndRotation(FVector(-2.8f, 5.89f, 0.0f), FRotator(0.0f, 90.0f, -90.0f));
+	FirstPersonCameraComponent->SetupAttachment(RootComponent);
+	FirstPersonCameraComponent->SetRelativeLocation(FVector(-0.f, 0.f, 70.0f)); // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
 	FirstPersonCameraComponent->bEnableFirstPersonFieldOfView = true;
 	FirstPersonCameraComponent->bEnableFirstPersonScale = true;
@@ -36,22 +37,27 @@ AASCharacter::AASCharacter()
 	CameraRoot->SetupAttachment(FirstPersonCameraComponent);
 	
 	// Create the first person mesh that will be viewed only by this character's owner
-	FirstPersonMesh = GetMesh();
-	FirstPersonMesh->SetupAttachment(CameraRoot);
-	FirstPersonMesh->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::FirstPerson;
-	FirstPersonMesh->SetOwnerNoSee(false);
-	FirstPersonMesh->SetOnlyOwnerSee(true);
-	FirstPersonMesh->SetCollisionProfileName(FName("NoCollision"));
-
-	GunSocket = CreateDefaultSubobject<USceneComponent>(TEXT("GunSocket"));
+	GetMesh()->SetupAttachment(CameraRoot);
+	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::FirstPerson;
+	GetMesh()->SetOwnerNoSee(false);
+	GetMesh()->SetOnlyOwnerSee(true);
+	GetMesh()->SetRelativeLocation(FVector(2.f, 1.f, -194.f));
+	GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+	GetMesh()->SetRelativeScale3D(FVector(1.2f, 1.2f, 1.2f));
 	
+	WorldMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("World Mesh"));
+	WorldMesh->SetupAttachment(RootComponent);
+	WorldMesh->SetOwnerNoSee(true);
+	WorldMesh->SetOnlyOwnerSee(false);
+	WorldMesh->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
+
 	MovementStateMachine = CreateDefaultSubobject<UMovementStateComponent>(TEXT("MovementStateComponent"));
-
-	GetCapsuleComponent()->SetCapsuleSize(34.0f, 96.0f);
-
+	
 	// Configure character movement
 	GetCharacterMovement()->BrakingDecelerationFalling = 150.0f;
 	GetCharacterMovement()->AirControl = 0.4f;
+	GetCharacterMovement()->GravityScale = 2.0f;
+	GetCharacterMovement()->SetCrouchedHalfHeight(48.f);
 
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(false); // <- No Multiplayer :(
@@ -60,21 +66,16 @@ AASCharacter::AASCharacter()
 	GameplayTasksComponent = CreateDefaultSubobject<UGameplayTasksComponent>(TEXT("GameplayTasksComponent"));
 }
 
-void AASCharacter::OnConstruction(const FTransform& Transform)
-{
-	Super::OnConstruction(Transform);
-	GunSocket->AttachToComponent(
-		FirstPersonMesh,
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		TEXT("HandGrip_R"));
-}
-
 void AASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	OnAttributesChanged.AddDynamic(this, &AASCharacter::UpdateMovementSpeed);
-	CachedInternalMovementSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	OnAnyAttributeChanged.AddDynamic(this, &AASCharacter::HandleAnyAttributeChanged);
+	OnHealthChanged.AddDynamic(this, &AASCharacter::HandleHealthChanged);
+	OnEnergyChanged.AddDynamic(this, &AASCharacter::HandleEnergyChanged);
+	OnMovementSpeedChanged.AddDynamic(this, &AASCharacter::HandleMovementSpeedChanged);
+	OnAppliedDamage.AddDynamic(this, &AASCharacter::HandleAppliedDamage);
+	OnOutOfAmmo.AddDynamic(this, &AASCharacter::HandleOutOfAmmo);
 	ApplyStartupGameplayEffects();
 
 	if (InitialGunClass)
@@ -82,6 +83,9 @@ void AASCharacter::BeginPlay()
 		AGun* NewGun = GetWorld()->SpawnActor<AGun>(InitialGunClass);
 		EquipGun(NewGun);
 	}
+
+	
+	MovementStateMachine->InitializeStates();
 }
 
 void AASCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
@@ -94,35 +98,11 @@ void AASCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 P
 	if (NewMovementMode == MOVE_Falling)
 	{
 		MovementStateMachine->ChangeState(EMovementState::Falling);
-	}else if (NewMovementMode == MOVE_Walking)
-	{
-		MovementStateMachine->ChangeState(EMovementState::Walking);
 	}
-}
-
-void AASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{	
-	// Set up action bindings
-	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	else if (NewMovementMode == MOVE_Walking)
 	{
-		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleLookInput);
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleMoveInput);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleJumpInput);
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleCrouchInput);
-		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleSprintInput);
-		EnhancedInputComponent->BindAction(WallRunAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleWallRunInput);
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleInteractInput);
-		EnhancedInputComponent->BindAction(GunMainAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleGunMainInput);
-		EnhancedInputComponent->BindAction(GunSecondaryAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleGunSecondaryInput);
-		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleThrowInput);
-		EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AASCharacter::HandleReloadInput);
+		MovementStateMachine->NextState();
 	}
-	else
-	{
-		UE_LOG(LogAwakenShooter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
-
-	MovementStateMachine->InitializeStates();
 }
 
 void AASCharacter::PossessedBy(AController* NewController)
@@ -131,6 +111,7 @@ void AASCharacter::PossessedBy(AController* NewController)
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		AbilitySystemComponent->AbilityActorInfo->SkeletalMeshComponent = GetVisibleMesh();
 		InitializeAttributes();
 	}
 }
@@ -144,67 +125,6 @@ void AASCharacter::InitializeAttributes()
 	}
 	AbilitySystemComponent->ApplyGameplayEffectToSelf(
 		AttributeDefaults->GetDefaultObject<UGameplayEffect>(), 1.f, AbilitySystemComponent->MakeEffectContext());
-}
-
-void AASCharacter::HandleLookInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleLook(Value);
-}
-
-void AASCharacter::HandleMoveInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleMove(Value);
-}
-
-void AASCharacter::HandleJumpInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleJump(Value);
-}
-
-void AASCharacter::HandleCrouchInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleCrouch(Value);
-}
-
-void AASCharacter::HandleSprintInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleSprint(Value);
-}
-
-void AASCharacter::HandleWallRunInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleWallRun(Value);
-}
-
-void AASCharacter::HandleInteractInput(const FInputActionValue& Value)
-{
-	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, TEXT("Interact"));
-	if (!PossibleInteraction)
-	{
-		return;
-	}
-	GetPossibleInteraction()->Interact(this);
-}
-
-void AASCharacter::HandleGunMainInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleGunMain(Value);
-}
-
-void AASCharacter::HandleGunSecondaryInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleGunSecondary(Value);
-}
-
-void AASCharacter::HandleThrowInput(const FInputActionValue& Value)
-{
-	ThrowEquipped();
-	// MovementStateMachine->HandleThrow(Value);
-}
-
-void AASCharacter::HandleReloadInput(const FInputActionValue& Value)
-{
-	MovementStateMachine->HandleReload(Value);
 }
 
 void AASCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectToApply)
@@ -223,176 +143,67 @@ void AASCharacter::ApplyStartupGameplayEffects()
 	}
 }
 
-bool AASCharacter::TryFindInteraction()
+void AASCharacter::HandleMovementSpeedChanged(float NewValue)
 {
-	const FVector Position = GetCameraComponent()->GetComponentLocation() + GetCameraComponent()->GetForwardVector() * 120.f;
-	FCollisionQueryParams Params;
-	if (EquippedGun)
-		Params.AddIgnoredActor(EquippedGun);
-
-	TArray<FOverlapResult> Interactions;
-	TArray<IInteractable*> Interactables;
-	
-	IInteractable* Interactive = nullptr;
-	if (FASCVars::ASDebugDraw && FASCVars::ASDrawInteractionsZone)
-	{
-		DrawDebugSphere(GetWorld(), Position, 85.f,12,
-			FColor::Red, false, 0.f, 0.f, .25f);
-	}
-	if (GetWorld()->OverlapMultiByChannel(Interactions, Position, FQuat::Identity, ECC_GameTraceChannel2, 
-		FCollisionShape::MakeSphere(85.f), Params))
-	{
-		float ClosestMatch = -1.f;
-		for (const auto& Item : Interactions)
-		{
-			if(!(Item.GetActor() && Item.GetActor()->Implements<UInteractable>()) )
-			{
-				continue;
-			}
-			if (FASCVars::ASDebugDraw && FASCVars::ASDrawDetailedInteractions)
-			{
-				Interactables.Add(Cast<IInteractable>(Item.GetActor()));
-			}
-			FVector DirectionToItem = 
-				(Item.GetActor()->GetActorLocation() - GetCameraComponent()->GetComponentLocation()).GetSafeNormal();
-			float IDotC = DirectionToItem.Dot(GetCameraComponent()->GetForwardVector());
-			if (IDotC > ClosestMatch)
-			{
-				Interactive = Cast<IInteractable>(Item.GetActor());
-				ClosestMatch = IDotC;
-			}
-		}
-	}
-
-	if (FASCVars::ASDebugDraw && FASCVars::ASDrawDetailedInteractions)
-	{
-		for (const auto& Item : Interactables)
-		{
-			AActor* Actor = Cast<AActor>(Item);
-			FColor Color = FColor::Red;
-			if (Item == Interactive)
-			{
-				Color = FColor::Green;
-			}
-			DrawDebugSphere(GetWorld(), Actor->GetActorLocation(), 20.f,4,
-				Color, false, 0.f, 0.f, 1.f);
-		}
-	}
-	
-	SetPossibleInteraction(Interactive);
-	
-	if (PossibleInteraction)
-	{
-		return true;
-	}
-	return false;
+	GetCharacterMovement()->MaxWalkSpeed = CachedInternalMovementSpeed * NewValue;
 }
 
-void AASCharacter::SetPossibleInteraction(IInteractable* NewInteraction)
+void AASCharacter::HandleAppliedDamage(float DamageValue, const FHitResult& SourceHit)
 {
-	if (IInteractable* OldInteraction = GetPossibleInteraction())
+	if (DamageValue >= AttributeSet->GetHealth() && GetCurrentMovementState() != EMovementState::Death)
 	{
-		if (OldInteraction == NewInteraction)
-			return;
-		
-		OldInteraction->SetHighlighted(0.f);
+		Die();
 	}
-	if (AActor* InteractableActor = Cast<AActor>(NewInteraction))
+	// if (SourceHit.bBlockingHit)
+	// {
+	// 	const FVector DamageDirection = (SourceHit.ImpactPoint - SourceHit.TraceStart).GetSafeNormal();
+	// 	GetVisibleMesh()->AddImpulseAtLocation(GetActorLocation(), DamageDirection * 1000.f);
+	// }
+}
+
+void AASCharacter::HandleOutOfAmmo()
+{
+	TryActivateAbilityByTag(FASGameplayTags::Ability::DryFire);
+}
+
+void AASCharacter::Die()
+{
+	MovementStateMachine->ChangeState(EMovementState::Death, true, true);
+	for (auto GameplayEffect : StartupGameplayEffects)
 	{
-		NewInteraction->SetHighlighted(1.f);
-		PossibleInteraction = InteractableActor;
+		AbilitySystemComponent->RemoveActiveEffectsWithSourceTags(
+			FGameplayTagContainer(GameplayEffect->GetDefaultObject<UGameplayEffect>()->GetAssetTags()));
+	}
+	
+	AASGameMode* GameMode = Cast<AASGameMode>(UGameplayStatics::GetGameMode(this));
+	if (!GameMode)
+		return;
+	
+	if (ActorHasTag(FName("Player")))
+	{
+		GameMode->PlayerDeath();
 	}
 	else
 	{
-		PossibleInteraction = nullptr;
+		GameMode->EnemyKilled();
 	}
-}
-
-IInteractable* AASCharacter::GetPossibleInteraction() const
-{
-	return Cast<IInteractable>(PossibleInteraction);
 }
 
 void AASCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	if (TryFindInteraction())
-	{
-		GEngine->AddOnScreenDebugMessage(-1, DeltaSeconds, FColor::Red, TEXT("Possible Interaction: ")
-			+ PossibleInteraction->GetName());
-	}
 	
-}
-
-bool AASCharacter::TryFindWall(FHitResult& OutHitResult)
-{
-	const FVector Start = GetCameraComponent()->GetComponentLocation();
-	const FVector Forward =(
-		FVector(GetMovementComponent()->Velocity.X, GetMovementComponent()->Velocity.Y, 0.f).GetSafeNormal()
-		+ GetActorForwardVector())
-		.GetSafeNormal();
-	const FVector EndFront = Start + Forward * 50.f;
-	const FVector EndRight = Start + Forward.RotateAngleAxis(25.f, FVector::UpVector) * 50.f;
-	const FVector EndLeft = Start + Forward.RotateAngleAxis(-25.f, FVector::UpVector) * 50.f;
-	constexpr float CheckCapsuleHalfHeight = 15.f;
-	if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
+	// Debug
+	if (FASCVars::ASDebugDraw)
 	{
-		DrawDebugCapsule(GetWorld(), EndFront, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
-		DrawDebugCapsule(GetWorld(), EndRight, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
-		DrawDebugCapsule(GetWorld(), EndLeft, CheckCapsuleHalfHeight, 10.f, FQuat::Identity, FColor::Red, false, 0.f, 0.f, .25f);
-	}
-	
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
-
-	if (GetWorld()->SweepSingleByChannel(
-		OutHitResult,
-		Start,
-		EndFront,
-		FQuat::Identity,
-		ECC_WorldStatic,
-		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
-		Params)
-		|| GetWorld()->SweepSingleByChannel(
-		OutHitResult,
-		Start,
-		EndRight,
-		FQuat::Identity,
-		ECC_WorldStatic,
-		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
-		Params)
-		|| GetWorld()->SweepSingleByChannel(
-		OutHitResult,
-		Start,
-		EndLeft,
-		FQuat::Identity,
-		ECC_WorldStatic,
-		FCollisionShape::MakeCapsule(10.f, CheckCapsuleHalfHeight),
-		Params))
-	{
-		const FVector End = Start - OutHitResult.Normal * 70.f;
-		if (GetWorld()->SweepSingleByChannel(
-			OutHitResult,
-			Start,
-			End,
-			FQuat::Identity,
-			ECC_WorldStatic,
-			FCollisionShape::MakeCapsule(10.f, 20.f),
-			Params))
+		if (FASCVars::ASDrawFireCone && IsPlayerControlled())
 		{
-			if (FASCVars::ASDebugDraw && FASCVars::ASDrawWallCatchTests)
-			{
-				DrawDebugCapsule(GetWorld(),
-					OutHitResult.ImpactPoint, CheckCapsuleHalfHeight, 10.f, FQuat::Identity,
-					FColor::Green, false, FASCVars::ASDebugDrawDuration, 0.f, .25f);
-			}	
-		}
-		if (FMath::Abs(OutHitResult.Normal.Dot(FVector::UpVector)) < .25f)
-		{
-			return true;
+			const float GunSpreadRad = FMath::DegreesToRadians(GetGunSpread());
+			DrawDebugCone(GetWorld(), FirstPersonCameraComponent->GetComponentLocation()+FirstPersonCameraComponent->GetForwardVector()* 10.f,
+				FirstPersonCameraComponent->GetForwardVector(),30000.f, GunSpreadRad,
+				GunSpreadRad, 32.f, FColor::Red, false, 0.f);
 		}
 	}
-	return false;
 }
 
 bool AASCharacter::TryActivateAbilityByTag(FGameplayTag AbilityTag)
@@ -404,36 +215,55 @@ bool AASCharacter::TryActivateAbilityByTag(FGameplayTag AbilityTag)
 	return false;
 }
 
-void AASCharacter::UpdateMovementSpeed(const FGameplayAttribute& Attribute, float NewValue)
+void AASCharacter::TryCancelAbilitiesWithTag(FGameplayTag AbilityTag)
 {
-	if (Attribute.GetName() == AttributeSet->GetMovementSpeedAttribute().GetName())
+	if (AbilitySystemComponent)
 	{
-		GetCharacterMovement()->MaxWalkSpeed = CachedInternalMovementSpeed * NewValue;
+		FGameplayTagContainer TagContainer(AbilityTag);
+		AbilitySystemComponent->CancelAbilities(&TagContainer);
 	}
+}
+
+void AASCharacter::SetIgnoreProjectiles(bool bIgnoreProjectiles)
+{
+	if (bIgnoreProjectiles)
+		GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Ignore);
+	else
+		GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
 }
 
 void AASCharacter::EquipGun(AGun* Gun)
 {
+	if (EquippedGun == Gun)
+		return;
+
 	if (EquippedGun)
 	{
-		EquippedGun->SetGunHolder(nullptr);
+		EquippedGun->Drop();
+	}
+	if (Gun)
+	{
+		Gun->SetGunHolder(this);
+	}
+	SetEquippedGun(Gun);
+}
+
+void AASCharacter::SetEquippedGun(AGun* Gun)
+{
+	if (Gun)
+	{
+		GetFirstPersonMesh()->SetRelativeLocation(Gun->GetDefaultGunPosition());
+	}else
+	{
+		GetFirstPersonMesh()->SetRelativeLocation(FVector(5.f, 0.f, -190.f));
 	}
 	EquippedGun = Gun;
-	EquippedGun->SetGunHolder(this);
+	OnAccuracyModifierChanged.Broadcast(GetAccuracyModifier());
 }
 
-void AASCharacter::ThrowEquipped()
+USkeletalMeshComponent* AASCharacter::GetVisibleMesh() const
 {
-	if (!EquippedGun)
-		return;
-	
-	EquippedGun->Throw(FirstPersonCameraComponent->GetForwardVector() * 100.f);
-	EquippedGun = nullptr;
-}
-
-void AASCharacter::SetEquippedGun(AGun* NewGun)
-{
-	EquippedGun = NewGun;
+	return IsPlayerControlled() ? GetMesh() : WorldMesh.Get();
 }
 
 EMovementState AASCharacter::GetCurrentMovementState() const
@@ -444,4 +274,271 @@ EMovementState AASCharacter::GetCurrentMovementState() const
 	}
 	
 	return MovementStateMachine->GetCurrentStateID();
+}
+
+float AASCharacter::GetHealth() const
+{
+	return AttributeSet->GetHealth();
+}
+
+float AASCharacter::GetMaxHealth() const
+{
+	return AttributeSet->GetMaxHealth();
+}
+
+float AASCharacter::GetHealthRegen() const
+{
+	return AttributeSet->GetHealthRegen();
+}
+
+float AASCharacter::GetEnergy() const
+{
+	return AttributeSet->GetEnergy();
+}
+
+float AASCharacter::GetMaxEnergy() const
+{
+	return AttributeSet->GetMaxEnergy();
+}
+
+float AASCharacter::GetEnergyRegen() const
+{
+	return AttributeSet->GetEnergyRegen();
+}
+
+float AASCharacter::GetMovementSpeed() const
+{
+	return AttributeSet->GetMovementSpeed();
+}
+
+float AASCharacter::GetJumpPower() const
+{
+	return AttributeSet->GetJumpPower();
+}
+
+float AASCharacter::GetAccuracyModifier() const
+{
+	return AttributeSet->GetAccuracyModifier();
+}
+
+float AASCharacter::GetDamageOutputModifier() const
+{
+	return AttributeSet->GetDamageOutputModifier();
+}
+
+void AASCharacter::SetHealth(float NewHealth)
+{
+	AttributeSet->SetHealth(NewHealth);
+}
+
+void AASCharacter::SetMaxHealth(float NewMaxHealth)
+{
+	AttributeSet->SetMaxHealth(NewMaxHealth);
+}
+
+void AASCharacter::SetHealthRegen(float NewHealthRegen)
+{
+	AttributeSet->SetHealthRegen(NewHealthRegen);
+}
+
+void AASCharacter::SetEnergy(float NewEnergy)
+{
+	AttributeSet->SetEnergy(NewEnergy);
+}
+
+void AASCharacter::SetMaxEnergy(float NewMaxEnergy)
+{
+	AttributeSet->SetMaxEnergy(NewMaxEnergy);
+}
+
+void AASCharacter::SetEnergyRegen(float NewEnergyRegen)
+{
+	AttributeSet->SetEnergyRegen(NewEnergyRegen);
+}
+
+void AASCharacter::SetMovementSpeed(float NewMovementSpeed)
+{
+	AttributeSet->SetMovementSpeed(NewMovementSpeed);
+}
+
+void AASCharacter::SetJumpPower(float NewJumpPower)
+{
+	AttributeSet->SetJumpPower(NewJumpPower);
+}
+
+void AASCharacter::SetAccuracyModifier(float NewAccuracyModifier)
+{
+	AttributeSet->SetAccuracyModifier(NewAccuracyModifier);
+}
+
+void AASCharacter::SetDamageOutputModifier(float NewDamageOutputModifier)
+{
+	AttributeSet->SetDamageOutputModifier(NewDamageOutputModifier);
+}
+
+float AASCharacter::GetGunSpread() const
+{
+	if (!EquippedGun)
+		return 90.f;
+	
+	const float MaxSpread = EquippedGun->GetBaseMaxSpread();
+	const float Accuracy = FMath::Clamp(EquippedGun->GetBaseAccuracy() * GetAccuracyModifier() * .01f, 0.f, 1.f);
+	const float ReturnSpread = FMath::Lerp(MaxSpread, 0.0f, Accuracy);
+	GEngine->AddOnScreenDebugMessage(2, 1.f, FColor::Red, TEXT("") + FString::FromInt(ReturnSpread));
+	return ReturnSpread;
+}
+
+UAnimMontage* AASCharacter::GetBestHitMontage(const FVector& InHitLocation, const FVector& InHitDirection)
+{
+	float BestMontageScore = -1.f;
+	UAnimMontage* BestMontage = nullptr;
+
+	for (const auto& MontageData : ReceiveHitMontages)
+	{
+		if (!MontageData.Montage) continue;
+
+		FVector MontageHitLocation = GetVisibleMesh()->GetComponentTransform().TransformPositionNoScale(MontageData.HitLocation);
+		if (MontageData.BoneName != NAME_None)
+		{
+			if (MontageData.HitLocation.IsNearlyZero())
+				MontageHitLocation = GetVisibleMesh()->GetBoneLocation(MontageData.BoneName);
+		}
+		const float MontageScore = FMath::Clamp(100.f / FVector::DistSquared(InHitLocation, MontageHitLocation), 0.f, 1.f)
+			+ InHitDirection.Dot(GetVisibleMesh()->GetComponentTransform().TransformVectorNoScale(MontageData.HitDirection));
+		if ( MontageScore > BestMontageScore )
+		{
+			BestMontageScore = MontageScore;
+			BestMontage = MontageData.Montage;
+		}
+	}
+	return BestMontage;
+}
+
+void AASCharacter::Stun(float Duration)
+{
+	if (!StunEffect)
+		return;
+	
+	FGameplayEffectSpec Spec = FGameplayEffectSpec(StunEffect.GetDefaultObject(), AbilitySystemComponent->MakeEffectContext());
+	Spec.SetSetByCallerMagnitude(FASGameplayTags::Data::StunDuration, FMath::Clamp(Duration, 0.1f, 1.f));
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
+}
+
+void AASCharacter::SetBulletTime(float NewBulletTimeValue)
+{
+	SetIgnoreProjectiles(NewBulletTimeValue < 1.f);
+
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), NewBulletTimeValue);
+}
+	
+float AASCharacter::GetGroundDistance()
+{
+	FHitResult HitResult;
+	FVector Start = GetActorLocation();
+	FVector End = Start - GetActorUpVector() * 300.f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	if (GetWorld()->SweepSingleByChannel(HitResult, Start, End,FQuat::Identity, ECC_Visibility,
+		FCollisionShape::MakeSphere(30.f), Params))
+	{
+		return HitResult.Distance;
+	}
+	return UE_BIG_NUMBER;
+}
+
+UAISense_Sight::EVisibilityResult AASCharacter::CanBeSeenFrom(const FCanBeSeenFromContext& Context,
+	FVector& OutSeenLocation, int32& OutNumberOfLoSChecksPerformed, int32& OutNumberOfAsyncLosCheckRequested,
+	float& OutSightStrength, int32* UserData, const FOnPendingVisibilityQueryProcessedDelegate* Delegate)
+{
+	const bool bDebugDraw = FASCVars::ASDebugDraw && FASCVars::AILineOfSightTraces;
+	
+	OutNumberOfLoSChecksPerformed = 0;
+    OutNumberOfAsyncLosCheckRequested = 0;
+    OutSightStrength = 0.f;
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return UAISense_Sight::EVisibilityResult::NotVisible;
+    }
+
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp || !MeshComp->SkeletalMesh)
+    {
+        return UAISense_Sight::EVisibilityResult::NotVisible;
+    }
+
+    const FVector ObserverLocation = Context.ObserverLocation;
+
+    // ---- Bone list ----
+
+    static const FName CenterBone(TEXT("spine_03"));
+    static const FName LeftBone(TEXT("clavicle_l"));
+    static const FName RightBone(TEXT("clavicle_r"));
+
+    TArray<FVector, TInlineAllocator<3>> TestPoints;
+
+    auto AddBoneLocationIfValid = [&](const FName& BoneName)
+    {
+        if (MeshComp->DoesSocketExist(BoneName))
+        {
+            TestPoints.Add(MeshComp->GetSocketLocation(BoneName));
+        }
+    };
+
+    AddBoneLocationIfValid(CenterBone);
+    AddBoneLocationIfValid(LeftBone);
+    AddBoneLocationIfValid(RightBone);
+
+    if (TestPoints.Num() == 0)
+    {
+        TestPoints.Add(GetActorLocation());
+    }
+
+    FCollisionQueryParams Params(SCENE_QUERY_STAT(AISight), /*bTraceComplex*/ true);
+    Params.AddIgnoredActor(this);
+
+    if (Context.IgnoreActor)
+    {
+        Params.AddIgnoredActor(Context.IgnoreActor);
+    }
+
+    for (const FVector& TargetPoint : TestPoints)
+    {
+        ++OutNumberOfLoSChecksPerformed;
+
+        FHitResult HitResult;
+        const bool bHit = World->LineTraceSingleByChannel(
+            HitResult,
+            ObserverLocation,
+            TargetPoint,
+            ECC_Visibility,
+            Params
+        );
+
+        if (!bHit || HitResult.GetActor() == this)
+        {
+            OutSeenLocation = TargetPoint;
+
+            const float DistanceSq = FVector::DistSquared(ObserverLocation, TargetPoint);
+            OutSightStrength = 1.f / FMath::Max(DistanceSq, 1.f);
+
+        	if (bDebugDraw)
+        	{
+        		DrawDebugLine(World, ObserverLocation, TargetPoint, FColor::Green, false,
+        			FASCVars::ASDebugDrawDuration, 0.f, 1.f);
+        	}
+            return UAISense_Sight::EVisibilityResult::Visible;
+        }
+    	
+    	if (bDebugDraw)
+    	{
+    		DrawDebugLine(World, ObserverLocation, HitResult.Location, FColor::Red, false,
+    				FASCVars::ASDebugDrawDuration, 0.f, 1.f);
+    	}
+    }
+
+    return UAISense_Sight::EVisibilityResult::NotVisible;
 }

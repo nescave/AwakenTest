@@ -13,7 +13,6 @@ UMovementStateComponent::UMovementStateComponent() :
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
-
 }
 
 void UMovementStateComponent::InitializeStates()
@@ -47,13 +46,20 @@ bool UMovementStateComponent::ChangeState(EMovementState NewState, bool bForce, 
 		}
 		PreviousState = GetCurrentStateID();
 	}
+	auto NewStateInstance = GetStateFromMap(NewState);
+	if (!NewStateInstance)
+	{
+		const FString StateName = StaticEnum<EMovementState>()->GetNameByValue(static_cast<int64>(NewState)).ToString();
+		UE_LOG(LogAwakenShooter, Warning, TEXT("Failed to find movement state %s. State not changed."), *StateName);
+		return false;
+	}
 
-	if (PreviousState != EMovementState::NONE)
+	if (PreviousState != EMovementState::NONE && CurrentState)
 	{
 		CurrentState->OnExitState();
 	}
-	
-	CurrentState = StateMap.FindRef(NewState);
+
+	CurrentState = NewStateInstance;
 	if (CurrentState)
 	{
 		CurrentState->OnEnterState();
@@ -164,6 +170,18 @@ void UMovementStateComponent::HandleReload(const FInputActionValue& Value)
 	if (!CurrentState)
 		return;
 	CurrentState->HandleReload(Value);
+}
+
+void UMovementStateComponent::HandleADS(const FInputActionValue& Value)
+{
+	if (!CurrentState)
+		return;
+	CurrentState->HandleADS(Value);
+}
+
+UMovementStateBase* UMovementStateComponent::GetStateFromMap(EMovementState StateID) const
+{
+	return StateMap.FindRef(StateID);
 }
 
 EMovementState UMovementStateComponent::GetCurrentStateID() const

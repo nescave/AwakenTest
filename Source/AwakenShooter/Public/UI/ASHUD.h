@@ -14,7 +14,7 @@ class AWAKENSHOOTER_API AASHUD : public AHUD
 {
 	GENERATED_BODY()
 	
-	UPROPERTY()
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category="HUD", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<class UASMainWidget> MainWidget;
 
 	bool bNeedsUpdate = false;
@@ -28,10 +28,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="HUD")
 	UASMainWidget* GetMainWidget() const { return MainWidget; }
-	UFUNCTION(BlueprintCallable, Category="HUD")
-	void FlagForHudUpdate(const FGameplayAttribute& Attribute, float NewValue);
-	UFUNCTION(BlueprintCallable, Category="HUD")
-	void UpdateMainWidget();
+
 	
 protected:
 	virtual void Tick(float DeltaTime) override;

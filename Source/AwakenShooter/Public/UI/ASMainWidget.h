@@ -22,9 +22,10 @@ public:
 	void SetCharacter(AASCharacter* NewCharacter);
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "ASUI")
-	void UpdateHealthBar();
+	void UpdateHealthBar(float NewHealth);
 	UFUNCTION(BlueprintImplementableEvent, Category = "ASUI")
-	void UpdateEnergyBar();
+	void UpdateEnergyBar(float NewEnergy);
 	UFUNCTION(BlueprintImplementableEvent, Category = "ASUI")
-	void UpdateAmmo();
+	void UpdateCrosshair(float NewValue);
+
 };

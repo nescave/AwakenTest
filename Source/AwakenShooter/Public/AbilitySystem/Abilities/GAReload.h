@@ -14,9 +14,6 @@ class AWAKENSHOOTER_API UGAReload : public UGameplayAbility
 {
 	GENERATED_BODY()
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "ReloadSpecs")
-	UAnimMontage* ReloadMontage;
-	
 	UPROPERTY(Transient)
 	TObjectPtr<class AASCharacter> Character;
 	

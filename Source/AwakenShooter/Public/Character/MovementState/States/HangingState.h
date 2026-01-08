@@ -20,10 +20,19 @@ class AWAKENSHOOTER_API UHangingState : public UMovementStateBase
 	bool bCanWallRun;
 	bool bIsWallRunning;
 	
-	FHitResult HangingPoint;
+	TOptional<FHitResult> HangingPoint;
+	FVector EnterVelocity;
 	bool bGrabbedLedge;
 	float HangingTime;
 	int32 WallRunCount;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "WallRun")
+	int32 WallRunLimit;
+	UPROPERTY(EditDefaultsOnly, Category = "WallRun", meta=(ClampMin=0.f, ClampMax=1.f))
+	float UpWallRunLookWeight;
+	UPROPERTY(EditDefaultsOnly, Category = "WallRun", meta=(ClampMin=0.f, ClampMax=1.f))
+	float SidesWallRunLookWeight;
 	
 public:
 	UHangingState();
@@ -35,16 +44,18 @@ public:
 	virtual void HandleMove(const FInputActionValue& Value) override;
 	virtual void HandleJump(const FInputActionValue& Value) override;
 	virtual void HandleCrouch(const FInputActionValue& Value) override;
-	virtual void HandleSprint(const FInputActionValue& Value) override {}
+	virtual void HandleSprint(const FInputActionValue& Value) override;
 	virtual void HandleWallRun(const FInputActionValue& Value) override;
 
 	virtual FVector GetJumpDirection() override;
-	const FHitResult& GetHangingPoint() const {return HangingPoint;}
-	void SetHangingPoint(const FHitResult& HitResult, bool bSweepCharacter = false);
+	bool GetHangingPoint(FHitResult& OutHangingPoint) const;
+	void SetHangingPoint(const FHitResult& HitResult);
 	
 private:
-	void StartWallRun();	
+	bool StartWallRun(bool bResetPreviousVelocity = false);	
 	void StopWallRun();
 
 	bool TryGetWallInDirection(FHitResult& OutHitResult, FVector Direction = FVector::ZeroVector);
+	FVector GetWallRunDirection();
+	void AdjustVelocityToDirection(const FVector& Direction, bool bDiscardDownVelocity = true);	
 };

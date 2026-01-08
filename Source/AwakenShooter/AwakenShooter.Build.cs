@@ -22,19 +22,14 @@ public class AwakenShooter : ModuleRules
 			"GameplayAbilities",
 			"GameplayTasks",
 			"GameplayTags",
+			"NavigationSystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"AwakenShooter/Public",
-			"AwakenShooter",
-			"AwakenShooter/Variant_Horror",
-			"AwakenShooter/Variant_Horror/UI",
-			"AwakenShooter/Variant_Shooter",
-			"AwakenShooter/Variant_Shooter/AI",
-			"AwakenShooter/Variant_Shooter/UI",
-			"AwakenShooter/Variant_Shooter/Weapons"
+			"AwakenShooter"
 		});
 
 		// Uncomment if you are using Slate UI

@@ -22,5 +22,13 @@ namespace FASCVars
 	extern int32 ASDrawShotTraces;
 	extern int32 ASDrawInteractionsZone;
 	extern int32 ASDrawDetailedInteractions;
-	
+	extern int32 ASDrawVelocityClamping;
+	extern int32 ASDrawBotTargeting;
+	extern int32 ASDrawBotPathfinding;
+	extern int32 ASDrawFireCone;
+	extern int32 ASDrawThrowTargeting;
+	extern int32 AILineOfSightTraces;
+
+	extern int32 ASGodMode;
+
 }

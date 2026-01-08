@@ -14,12 +14,12 @@ UCharacterHeightTransition::UCharacterHeightTransition(const FObjectInitializer&
 }
 
 UCharacterHeightTransition* UCharacterHeightTransition::CharacterHeightTransition(
-	const TScriptInterface<IGameplayTaskOwnerInterface>& TaskOwner, float TargetCameraHeight, float TargetCapsuleHalfHeight,
+	const TScriptInterface<IGameplayTaskOwnerInterface>& TaskOwner, float InTargetCameraHeight, float InTargetCapsuleHalfHeight,
 	UCameraComponent* CameraComponent, UCapsuleComponent* CapsuleComponent, float TransitionDuration)
 {
 	UCharacterHeightTransition* Task = NewTask<UCharacterHeightTransition>(TaskOwner);
-	Task->TargetCameraHeight = TargetCameraHeight;
-	Task->TargetCapsuleHalfHeight = TargetCapsuleHalfHeight;
+	Task->TargetCameraHeight = InTargetCameraHeight;
+	Task->TargetCapsuleHalfHeight = InTargetCapsuleHalfHeight;
 	Task->CameraComponent = CameraComponent;
 	Task->CapsuleComponent = CapsuleComponent;
 	Task->TransitionDuration = FMath::Max(TransitionDuration, KINDA_SMALL_NUMBER);
@@ -30,12 +30,12 @@ void UCharacterHeightTransition::TickTask(float DeltaTime)
 {
 	ElapsedTime += DeltaTime;
 	float LerpFactor = FMath::Min(ElapsedTime / TransitionDuration, 1.f);
-	
-	CameraComponent->SetRelativeLocation(FVector(0.f, 0.f, FMath::Lerp(CameraComponent->GetRelativeLocation().Z, TargetCameraHeight, LerpFactor)));
-	// CapsuleComponent->SetCapsuleHalfHeight(FMath::Lerp(CapsuleComponent->GetScaledCapsuleHalfHeight(), TargetCapsuleHalfHeight, LerpFactor));
 
 	if (LerpFactor >= 1.f)
 	{
 		EndTask();
 	}
+
+	CameraComponent->SetRelativeLocation(FVector(0.f, 0.f, FMath::Lerp(CameraComponent->GetRelativeLocation().Z, TargetCameraHeight, LerpFactor)));
+	CapsuleComponent->SetCapsuleHalfHeight(FMath::Lerp(CapsuleComponent->GetScaledCapsuleHalfHeight(), TargetCapsuleHalfHeight, LerpFactor));
 }

@@ -3,22 +3,22 @@
 
 #include "AbilitySystem/Abilities/GASlide.h"
 
-#include "AwakenShooter.h"
 #include "AbilitySystem/GameplayTags.h"
-#include "Character/ASCharacter.h"
+#include "Character/ASPlayerCharacter.h"
+#include "Character/MovementState/MovementStateComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UGASlide::UGASlide() :
-	SlideSpeedBoost(1.5f)
+	SlideSpeedBoost(250.f)
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Slide));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability::Slide));
 }
 
 void UGASlide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	ACharacter* Character = Cast<AASCharacter>(ActorInfo->AvatarActor.Get());
+	AASPlayerCharacter* Character = Cast<AASPlayerCharacter>(ActorInfo->AvatarActor.Get());
 	
 	if (!Character)
 	{
@@ -26,6 +26,8 @@ void UGASlide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		return;
 	}
 
-	Character->GetCharacterMovement()->Velocity *= SlideSpeedBoost;
+	Character->AddClampedVelocity(Character->GetVelocity().GetSafeNormal(), SlideSpeedBoost, true);
+	Character->GetMovementStateMachine()->ChangeState(EMovementState::Sliding);
+	
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

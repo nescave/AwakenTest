@@ -4,6 +4,7 @@
 #include "UI/ASMainWidget.h"
 
 #include "AwakenShooter.h"
+#include "Character/ASCharacter.h"
 
 void UASMainWidget::SetCharacter(AASCharacter* NewCharacter)
 {
@@ -13,4 +14,7 @@ void UASMainWidget::SetCharacter(AASCharacter* NewCharacter)
 		return;
 	}
 	ControlledCharacter = NewCharacter;
+	ControlledCharacter->GetOnHealthChangedDelegate().AddDynamic(this, &UASMainWidget::UpdateHealthBar);
+	ControlledCharacter->GetOnEnergyChangedDelegate().AddDynamic(this, &UASMainWidget::UpdateEnergyBar);
+	ControlledCharacter->GetOnAccuracyModifierChangedDelegate().AddDynamic(this, &UASMainWidget::UpdateCrosshair);
 }

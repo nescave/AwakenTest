@@ -9,28 +9,32 @@
 
 UGAUseSecondary::UGAUseSecondary()
 {
-	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability::Secondary));
 }
 
-void UGAUseSecondary::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	const FGameplayEventData* TriggerEventData)
+void UGAUseSecondary::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
-	AASCharacter* Character = Cast<AASCharacter>(ActorInfo->AvatarActor);
-	if (!Character)
+	AGun* Gun = Cast<AGun>(ActorInfo->AvatarActor);
+	if (!Gun)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
 	
-	if (AGun* Gun = Character->GetEquippedGun())
+	AASCharacter* Character = Gun->GetGunHolder();
+	if (!Character)
 	{
-		Gun->SecondaryAction();
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
 	}
+
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Secondary);
+
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

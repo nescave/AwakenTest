@@ -12,7 +12,7 @@ UCrouchingState::UCrouchingState()
 	StateID = EMovementState::Crouching;
 	NextState = EMovementState::Walking;
 	TargetCameraHeight = 40.f;
-	TargetCapsuleHalfHeight = 30.f;
+	TargetCapsuleHalfHeight = 48.f;
 }
 
 void UCrouchingState::OnEnterState_Implementation()
@@ -35,6 +35,12 @@ void UCrouchingState::HandleReload(const FInputActionValue& Value)
 {
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Reload));
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability::Reload));
 	}
+}
+
+void UCrouchingState::HandleSprint(const FInputActionValue& Value)
+{
+	StateMachine->NextState();
+	Super::HandleSprint(Value);
 }

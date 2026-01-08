@@ -37,11 +37,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Energy")
 	FGameplayAttributeData EnergyRegen;
 	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, EnergyRegen)
-
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	FGameplayAttributeData MovementSpeed;
 	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, MovementSpeed)
-
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	FGameplayAttributeData JumpPower;
 	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, JumpPower)
@@ -49,7 +47,16 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Damage")
 	FGameplayAttributeData Damage;
 	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, Damage)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon Handling")
+	FGameplayAttributeData AccuracyModifier;
+	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, AccuracyModifier)
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon Handling")
+	FGameplayAttributeData DamageOutputModifier;
+	ATTRIBUTE_ACCESSORS_BASIC(UCharacterAttributeSet, DamageOutputModifier)
 	
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
+	virtual bool PreGameplayEffectExecute(struct FGameplayEffectModCallbackData& Data) override;
+	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 };

@@ -5,21 +5,28 @@
 
 #include "AbilitySystem/CharacterAttributeSet.h"
 #include "AbilitySystem/GameplayTags.h"
-#include "Character/ASCharacter.h"
+#include "Character/ASPlayerCharacter.h"
 #include "Character/MovementState/MovementStateComponent.h"
-#include "Character/MovementState/States/HangingState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UGAJump::UGAJump()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Jump));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability::Jump));
 }
 
 void UGAJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	AASCharacter* Character = Cast<AASCharacter>(ActorInfo->AvatarActor.Get());
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	
+	AASPlayerCharacter* Character = Cast<AASPlayerCharacter>(ActorInfo->AvatarActor.Get());
 	
 	if (!Character)
 	{
@@ -31,9 +38,10 @@ void UGAJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 	const UCharacterAttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UCharacterAttributeSet>();
 
 	FVector JumpDirection = Character->GetMovementStateMachine()->GetCurrentState()->GetJumpDirection();
+
 	if (JumpDirection.SizeSquared() > 0.f)
 	{
-		MoveComp->Velocity += JumpDirection * AttributeSet->GetJumpPower();
+		Character->AddClampedVelocity(JumpDirection, AttributeSet->GetJumpPower());
 		MoveComp->SetMovementMode(MOVE_Falling);
 	}
 

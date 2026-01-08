@@ -9,27 +9,32 @@
 
 UGAUseMain::UGAUseMain()
 {
-	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability_Main));
+	SetAssetTags(FGameplayTagContainer(FASGameplayTags::Ability::Main));
 }
 
 void UGAUseMain::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
-                                 const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
-	AASCharacter* Character = Cast<AASCharacter>(ActorInfo->AvatarActor);
-	if (!Character)
+	AGun* Gun = Cast<AGun>(ActorInfo->AvatarActor);
+	if (!Gun)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
 	
-	if (AGun* Gun = Character->GetEquippedGun())
+	AASCharacter* Character = Gun->GetGunHolder();
+	if (!Character)
 	{
-		Gun->MainAction();
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
 	}
+
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Main);
+
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

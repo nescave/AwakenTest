@@ -16,6 +16,8 @@ class AWAKENSHOOTER_API UGunAttributeSet : public UAttributeSet
 	GENERATED_BODY()
 
 public:
+	UGunAttributeSet();
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Gun")
 	FGameplayAttributeData Damage;
 	ATTRIBUTE_ACCESSORS_BASIC(UGunAttributeSet, Damage)
@@ -40,6 +42,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Gun")
 	FGameplayAttributeData ShotsPerRound;	
 	ATTRIBUTE_ACCESSORS_BASIC(UGunAttributeSet, ShotsPerRound)
+	UPROPERTY(BlueprintReadOnly, Category = "Gun")
+	FGameplayAttributeData MaxSpread;	
+	ATTRIBUTE_ACCESSORS_BASIC(UGunAttributeSet, MaxSpread)
 	
 
 };

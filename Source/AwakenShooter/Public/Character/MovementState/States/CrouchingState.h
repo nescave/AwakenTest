@@ -23,4 +23,5 @@ public:
 
 	virtual void HandleCrouch(const FInputActionValue& Value) override;
 	virtual void HandleReload(const FInputActionValue& Value) override;
+	virtual void HandleSprint(const FInputActionValue& Value) override;
 };

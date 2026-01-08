@@ -9,10 +9,23 @@
 #include "AbilitySystem/GameplayTags.h"
 #include "Camera/CameraComponent.h"
 #include "Character/ASCharacter.h"
+#include "Character/ASPlayerCharacter.h"
 #include "Character/MovementState/MovementStateComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Items/Gun.h"
+
+UMovementStateBase::UMovementStateBase() :
+	StateMachine(nullptr),
+	Character(nullptr),
+	StateID(EMovementState::NONE),
+	bTickEnabled(false),
+	NextState(EMovementState::Walking),
+	NextStateOverride(EMovementState::NONE),
+	bStateLocked(false),
+	TargetCameraHeight(70.f),
+	TargetCapsuleHalfHeight(96.f)
+{}
 
 void UMovementStateBase::SetStateLocked(bool bInLocked)
 {
@@ -29,49 +42,17 @@ bool UMovementStateBase::CharacterHeightNeedsUpdate() const
 	return true;
 }
 
-float UMovementStateBase::GetGroundDistance()
-{
-	FHitResult HitResult;
-	FVector Start = Character->GetActorLocation();
-	FVector End = Start - Character->GetActorUpVector() * 200.f;
-
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(Character);
-
-	if (GetWorld()->SweepSingleByChannel(
-		HitResult,
-		Start,
-		End,
-		FQuat::Identity,
-		ECC_Visibility,
-		FCollisionShape::MakeCapsule(30.f, 60.f),
-		Params
-	))
-	{
-		return HitResult.Distance;
-	}
-	return UE_BIG_NUMBER;
-}
-
-UMovementStateBase::UMovementStateBase() :
-	StateMachine(nullptr),
-	Character(nullptr),
-	StateID(EMovementState::NONE),
-	bTickEnabled(false),
-	NextState(EMovementState::Walking),
-	bStateLocked(false),
-	TargetCameraHeight(70.f),
-	TargetCapsuleHalfHeight(96.f)
-{}
-
 void UMovementStateBase::Initialize(UMovementStateComponent* InStateMachine, AASCharacter* InCharacter)
 {
 	StateMachine = InStateMachine;
 	Character = InCharacter;
+	PlayerCharacter = Cast<AASPlayerCharacter>(InCharacter);
+	bIsPlayer = PlayerCharacter != nullptr;
 }
 
 void UMovementStateBase::OnEnterState_Implementation()
 {
+	NextStateOverride = EMovementState::NONE;
 	if (bDebugLogging)
 	{
 		FString Msg = FString::Printf(TEXT("Entering Movement State: %s"), *UEnum::GetValueAsString(StateID));
@@ -84,7 +65,7 @@ void UMovementStateBase::OnEnterState_Implementation()
 		HeightTransitionTask = UCharacterHeightTransition::CharacterHeightTransition(
 			Character->GetGameplayTasksComponent(),
 			TargetCameraHeight,
-			Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), // hack for now (changing collider scale is not the brightest idea)
+			TargetCapsuleHalfHeight,
 			Character->GetCameraComponent(),
 			Character->GetCapsuleComponent(),
 			1.f);
@@ -129,11 +110,19 @@ void UMovementStateBase::HandleMove(const FInputActionValue& Value)
 
 	Character->AddMovementInput(Character->GetActorRightVector(), MovementVector.X);
 	Character->AddMovementInput(Character->GetActorForwardVector(), MovementVector.Y);
+	if (MovementVector.SizeSquared() < .01f)
+	{
+		Character->TryCancelAbilitiesWithTag(FASGameplayTags::Ability::Sprint);
+		FGameplayTagContainer SprintEffectTags;
+		SprintEffectTags.AddTag(FASGameplayTags::Effect::SprintEaseOut);
+		SprintEffectTags.AddTag(FASGameplayTags::Effect::Sprint);
+		Character->GetAbilitySystemComponent()->RemoveActiveEffectsWithTags(SprintEffectTags);
+	}
 }
 
 void UMovementStateBase::HandleJump(const FInputActionValue& Value)
 {
-	Character->TryActivateAbilityByTag(FASGameplayTags::Ability_Jump);		
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Jump);		
 }
 
 void UMovementStateBase::HandleCrouch(const FInputActionValue& Value)
@@ -143,25 +132,37 @@ void UMovementStateBase::HandleCrouch(const FInputActionValue& Value)
 
 void UMovementStateBase::HandleSprint(const FInputActionValue& Value)
 {
-	if (Character->GetCharacterMovement()->Velocity.SizeSquared() > 0)
+	float InputValue = Value.Get<float>();
+	if (InputValue < .5f)
 	{
-		StateMachine->ChangeState(EMovementState::Sprinting);
+		Character->TryCancelAbilitiesWithTag(FASGameplayTags::Ability::Sprint);
 	}
+	else
+	{
+		if (Character->GetCharacterMovement()->Velocity.SizeSquared() > 0)
+		{
+			Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Sprint);
+		}
+	}
+	
 }
 
 void UMovementStateBase::HandleGunMain(const FInputActionValue& Value)
 {
-	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	if (Character->GetEquippedGun())
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
+		if (!Character->GetEquippedGun()->MainAction() && Character->GetEquippedGun()->IsAmmoEmpty())
+		{
+			Character->GetOnOutOfAmmoDelegate().Broadcast();
+		}
 	}
 }
 
 void UMovementStateBase::HandleGunSecondary(const FInputActionValue& Value)
 {
-	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
+	if (Character->GetEquippedGun())
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Secondary));
+		Character->GetEquippedGun()->SecondaryAction();
 	}
 }
 
@@ -169,13 +170,34 @@ void UMovementStateBase::HandleThrow(const FInputActionValue& Value)
 {
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Throw));
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability::Throw));
+	}
+}
+
+void UMovementStateBase::HandleADS(const FInputActionValue& Value)
+{
+	float InputValue = Value.Get<float>();
+	if ( InputValue >= .5f)
+	{
+		Character->TryActivateAbilityByTag(FASGameplayTags::Ability::AimDownSights);
+	}
+	else
+	{
+		Character->TryCancelAbilitiesWithTag(FASGameplayTags::Ability::AimDownSights);
 	}
 }
 
 FVector UMovementStateBase::GetJumpDirection()
 {
 	return Character->GetActorUpVector();
+}
+
+EMovementState UMovementStateBase::GetNextState() const
+{
+	if (NextStateOverride != EMovementState::NONE)
+		return NextStateOverride;
+
+	return NextState;
 }
 
 UWorld* UMovementStateBase::GetWorld() const

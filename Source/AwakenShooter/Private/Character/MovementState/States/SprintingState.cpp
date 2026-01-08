@@ -7,7 +7,6 @@
 #include "AbilitySystem/GameplayTags.h"
 #include "Character/ASCharacter.h"
 #include "Character/MovementState/MovementStateComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 
 USprintingState::USprintingState()
 {
@@ -28,13 +27,14 @@ void USprintingState::HandleMove(const FInputActionValue& Value)
 
 void USprintingState::HandleSprint(const FInputActionValue& Value)
 {
-	StateMachine->NextState();
+	float InputValue = Value.Get<float>();
+	if (InputValue < .5f)
+		StateMachine->NextState();
 }
 
 void USprintingState::HandleCrouch(const FInputActionValue& Value)
 {
-	Character->TryActivateAbilityByTag(FASGameplayTags::Ability_Slide);
-	StateMachine->ChangeState(EMovementState::Sliding);
+	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Slide);
 }
 
 void USprintingState::OnEnterState_Implementation()
@@ -43,7 +43,7 @@ void USprintingState::OnEnterState_Implementation()
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
 		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability_Reload);		
+		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability::Reload);		
 		ASC->CancelAbilities(&CancelAbilitiesTags);
 	}
 }

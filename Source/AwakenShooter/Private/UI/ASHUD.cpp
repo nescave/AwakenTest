@@ -26,33 +26,17 @@ void AASHUD::BeginPlay()
 	MainWidget = CreateWidget<UASMainWidget>(GetWorld(), MainWidgetClass);
 	if (auto GameInstance = GetGameInstance())
 	{
-		AASCharacter* ControlledCharacter = Cast<AASCharacter>(GameInstance->GetPrimaryPlayerController()->GetPawn());
-		ControlledCharacter->OnAttributeChangedDelegate().AddDynamic(this, &AASHUD::FlagForHudUpdate);
-		MainWidget->SetCharacter(ControlledCharacter);
+		if (AASCharacter* ControlledCharacter = Cast<AASCharacter>(GameInstance->GetPrimaryPlayerController()->GetPawn()))
+		{
+			MainWidget->SetCharacter(ControlledCharacter);
+			MainWidget->AddToViewport();
+		}
 	}
-	MainWidget->AddToViewport();
-}
-
-void AASHUD::FlagForHudUpdate(const FGameplayAttribute& Attribute, float NewValue)
-{
-	bNeedsUpdate = true;
-}
-
-void AASHUD::UpdateMainWidget()
-{
-	MainWidget->UpdateHealthBar();
-	MainWidget->UpdateEnergyBar();
-	MainWidget->UpdateAmmo();
 }
 
 void AASHUD::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (bNeedsUpdate)
-	{
-		UpdateMainWidget();
-		bNeedsUpdate = false;
-	}
 }
 
 void AASHUD::DrawHUD()

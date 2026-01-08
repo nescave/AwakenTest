@@ -15,7 +15,7 @@ UCLASS()
 class AWAKENSHOOTER_API UCharacterHeightTransition : public UGameplayTask
 {
 	GENERATED_BODY()
-private:
+
 	float TargetCameraHeight;
 	float TargetCapsuleHalfHeight;
 	float TransitionDuration;
@@ -32,8 +32,8 @@ public:
 	
 	static UCharacterHeightTransition* CharacterHeightTransition(
 		const TScriptInterface<IGameplayTaskOwnerInterface>& TaskOwner,
-		float TargetCameraHeight,
-		float TargetCapsuleHalfHeight,
+		float InTargetCameraHeight,
+		float InTargetCapsuleHalfHeight,
 		UCameraComponent* CameraComponent,
 		UCapsuleComponent* CapsuleComponent,
 		float TransitionDuration);

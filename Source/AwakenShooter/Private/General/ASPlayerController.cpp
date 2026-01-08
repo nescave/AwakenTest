@@ -6,9 +6,11 @@
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
 #include "General/ASCameraManager.h"
-#include "Blueprint/UserWidget.h"
 #include "AwakenShooter.h"
-#include "Widgets/Input/SVirtualJoystick.h"
+#include "EnhancedInputComponent.h"
+#include "Character/ASPlayerCharacter.h"
+#include "General/ASGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
 AASPlayerController::AASPlayerController()
 {
@@ -20,25 +22,13 @@ void AASPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	
-	// only spawn touch controls on local player controllers
-	if (SVirtualJoystick::ShouldDisplayTouchInterface() && IsLocalPlayerController())
+	GameMode = Cast<AASGameMode>(UGameplayStatics::GetGameMode(this));
+
+	if (!GameMode)
 	{
-		// spawn the mobile controls widget
-		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
-
-		if (MobileControlsWidget)
-		{
-			// add the controls to the player screen
-			MobileControlsWidget->AddToPlayerScreen(0);
-
-		} else {
-
-			UE_LOG(LogAwakenShooter, Error, TEXT("Could not spawn mobile controls widget."));
-
-		}
-
+		return;
 	}
+	GameMode->OnRoundEndDelegate.AddDynamic(this, &AASPlayerController::SetupInputMappingsAfterRoundsEnd);
 }
 
 void AASPlayerController::SetupInputComponent()
@@ -55,16 +45,29 @@ void AASPlayerController::SetupInputComponent()
 			{
 				Subsystem->AddMappingContext(CurrentContext, 0);
 			}
-
-			// only add these IMCs if we're not using mobile touch input
-			if (!SVirtualJoystick::ShouldDisplayTouchInterface())
-			{
-				for (UInputMappingContext* CurrentContext : MobileExcludedMappingContexts)
-				{
-					Subsystem->AddMappingContext(CurrentContext, 0);
-				}
-			}
 		}
 	}
 	
+}
+
+void AASPlayerController::HandleRestartAction()
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UGameplayStatics::OpenLevel(this, FName(*World->GetName()), true);
+}
+
+void AASPlayerController::HandleQuitAction()
+{
+	UKismetSystemLibrary::QuitGame(GetWorld(), this, EQuitPreference::Quit,true);
+}
+
+void AASPlayerController::SetupInputMappingsAfterRoundsEnd()
+{
+	if (auto EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		EnhancedInputComponent->BindAction(RestartAction, ETriggerEvent::Triggered, this, &AASPlayerController::HandleRestartAction);
+		EnhancedInputComponent->BindAction(QuitAction, ETriggerEvent::Triggered, this, &AASPlayerController::HandleQuitAction);
+	}
 }

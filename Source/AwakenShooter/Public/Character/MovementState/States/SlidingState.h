@@ -18,22 +18,26 @@ class AWAKENSHOOTER_API USlidingState : public UMovementStateBase
 	float CachedGroundFriction; // used for dragging input acceleration
 	float CachedDeceleration;
 	FVector CachedVelocityDirection;
-	float VelocitySquaredNeededToExitSlide;
+	float VelocityNeededToExitSlide;
 
 	bool MoveForwardPressed;
 	float LastRightInput;
 
 	UPROPERTY()
 	class UGTChangeSlideDirection* SlideDirectionTask;
-	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SlideProperties", meta=(AllowPrivateAccess))
+	float MinVelocityThreshold;	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SlideProperties", meta=(AllowPrivateAccess))
 	float SlideBaseDecelerationFactor;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SlideProperties", meta=(AllowPrivateAccess))
 	float SlideStopDecelerationFactor;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SlideProperties", meta=(AllowPrivateAccess))
+	TSubclassOf<UGameplayEffect> SlideDamageEffect;
+
 public:
 	USlidingState();
-
+	virtual void Initialize(UMovementStateComponent* InStateMachine, AASCharacter* InCharacter) override;
 	virtual void HandleLook(const FInputActionValue& Value) override;
 	virtual void HandleMove(const FInputActionValue& Value) override;
 	virtual void HandleSprint(const FInputActionValue& Value) override;
@@ -43,7 +47,15 @@ public:
 	virtual void OnExitState_Implementation() override;
 	virtual void OnStateTick_Implementation(float DeltaTime) override;
 
+	virtual FVector GetJumpDirection() override;
+
+protected:
+	UFUNCTION()
+	void OnSlideHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 private:
 	float LockedLookDuration;
 	bool bLookRotationIsLocked;
+	UPROPERTY()
+	TArray<AActor*> ThisSlideHits;
 };

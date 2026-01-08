@@ -16,6 +16,18 @@ void UWalkingState::HandleReload(const FInputActionValue& Value)
 {
 	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
 	{
-		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability_Reload));
+		ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FASGameplayTags::Ability::Reload));
+	}
+}
+
+void UWalkingState::HandleCrouch(const FInputActionValue& Value)
+{
+	if (Character->GetVelocity().SquaredLength() > 400000.f)
+	{
+		Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Slide);		
+	}
+	else
+	{
+		Super::HandleCrouch(Value);
 	}
 }

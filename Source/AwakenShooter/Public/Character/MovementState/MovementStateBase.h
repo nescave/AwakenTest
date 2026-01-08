@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "AbilitySystemComponent.h"
 #include "MovementStateBase.generated.h"
 
 struct FInputActionValue;
@@ -17,11 +18,14 @@ enum class EMovementState : uint8
 	Crouching,
 	Sliding,
 	Falling,
-	Hanging
+	Hanging,
+	ADS,
+	Death
 };
 class UAbilitySystemComponent;
 class UMovementStateComponent;
 class AASCharacter;
+class AASPlayerCharacter;
 /**
  * 
  */
@@ -30,7 +34,7 @@ class AWAKENSHOOTER_API UMovementStateBase : public UObject
 {
 	GENERATED_BODY()
 
-	bool bDebugLogging = true;
+	bool bDebugLogging = false;
 	
 	UPROPERTY()
 	TObjectPtr<class UCharacterHeightTransition> HeightTransitionTask;
@@ -40,6 +44,8 @@ protected:
 	TObjectPtr<UMovementStateComponent> StateMachine;
 	UPROPERTY()
 	TObjectPtr<AASCharacter> Character;
+	UPROPERTY()
+	TObjectPtr<AASPlayerCharacter> PlayerCharacter;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	EMovementState StateID;
 
@@ -48,26 +54,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	EMovementState NextState;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
+	EMovementState NextStateOverride;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	bool bStateLocked;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	float TargetCameraHeight;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	float TargetCapsuleHalfHeight;
-
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="State")
 	TArray<TSubclassOf<class UGameplayEffect>> EffectsToApply;
 
 	UPROPERTY()
 	TArray<struct FActiveGameplayEffectHandle> EffectsHandles;
-
-protected:
-	void SetStateLocked(bool bInLocked);
-	bool CharacterHeightNeedsUpdate() const;
-	float GetGroundDistance();
-
 public:
 	UMovementStateBase();
 	
+protected:
+	void SetStateLocked(bool bInLocked);
+	bool CharacterHeightNeedsUpdate() const;
+
+public:
 	virtual void Initialize(
 		UMovementStateComponent* InStateMachine,
 		AASCharacter* InCharacter);
@@ -91,6 +98,7 @@ public:
 	virtual void HandleGunSecondary(const FInputActionValue& Value);	
 	virtual void HandleReload(const FInputActionValue& Value) {}
 	virtual void HandleThrow(const FInputActionValue& Value);
+	virtual void HandleADS(const FInputActionValue& Value);
 
 
 	UFUNCTION(BlueprintCallable, Category="State")
@@ -100,15 +108,19 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="State")
 	AASCharacter* GetCharacter() const { return Character; }
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="State")
+	AASPlayerCharacter* GetPlayerCharacter() const { return PlayerCharacter; }	UFUNCTION(BlueprintCallable, BlueprintPure, Category="State")
+
 	virtual FVector GetJumpDirection();
 
 	EMovementState GetStateID() const { return StateID; }
 	bool IsLocked() const { return bStateLocked; }
-	EMovementState GetNextState() const { return NextState; }
-
+	bool OwnerIsPlayer() const { return bIsPlayer; }
+	EMovementState GetNextState() const;
+	
 	virtual UWorld* GetWorld() const override;
-
+	
 private:
+	bool bIsPlayer;
 	// helper functions
 	void ApplyEffects(UAbilitySystemComponent* ASC);
 	void RemoveEffects(UAbilitySystemComponent* ASC);

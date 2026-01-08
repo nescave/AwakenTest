@@ -20,6 +20,10 @@ class AWAKENSHOOTER_API IInteractable
 	GENERATED_BODY()
 
 public:
-	virtual void Interact(class AASCharacter* Interactor) = 0;
-	virtual void SetHighlighted(float HighlightValue) = 0;
+	UFUNCTION(BlueprintNativeEvent, Category = "Interactable")
+	void Interact(class AASCharacter* Interactor);
+	UFUNCTION(BlueprintNativeEvent, Category = "Interactable")
+	void SetHighlighted(float HighlightValue);
+	UFUNCTION(BlueprintNativeEvent, Category = "Interactable")
+	bool IsInteractable() const;
 };
