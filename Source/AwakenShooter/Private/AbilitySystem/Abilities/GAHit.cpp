@@ -46,6 +46,7 @@ void UGAHit::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGam
 	
 	const FVector PushbackDirection = (FVector::VectorPlaneProject(IncomingDirection, FVector::UpVector).GetSafeNormal() + FVector::UpVector/ EventData.EventMagnitude * 3.f).GetSafeNormal();
 	Character->LaunchCharacter(PushbackDirection * EventData.EventMagnitude * 10.f, true, false);
+	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 

@@ -48,6 +48,7 @@ void UGAAimDownSights::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		AppliedEffectHandle = BP_ApplyGameplayEffectToOwner(ADSEffect, 1.f,1);
 		Character->TryActivateAbilityByTag(FASGameplayTags::Ability::BulletTime);
 	}
+	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 

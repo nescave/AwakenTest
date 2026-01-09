@@ -123,7 +123,7 @@ void UGAFire::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 			PlayerCharacter->ReportNoiseEvent(1.f, 5000.f);
 		}
 	}
-	
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 

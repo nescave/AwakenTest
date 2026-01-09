@@ -36,5 +36,6 @@ void UGAUseMain::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const 
 
 	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Main);
 
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

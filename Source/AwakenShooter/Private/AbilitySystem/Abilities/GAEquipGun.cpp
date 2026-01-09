@@ -17,9 +17,6 @@ UGAEquipGun::UGAEquipGun()
 void UGAEquipGun::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
                                   const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -49,6 +46,8 @@ void UGAEquipGun::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const
 		FASGameplayTags::Ability::Event::GunEquipped);
 	PickUpGunTask->EventReceived.AddDynamic(this, &UGAEquipGun::PickUpGun);
 	PickUpGunTask->ReadyForActivation();
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
 void UGAEquipGun::OnMontageEnded()

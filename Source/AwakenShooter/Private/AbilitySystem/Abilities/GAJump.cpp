@@ -18,8 +18,6 @@ UGAJump::UGAJump()
 void UGAJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -46,4 +44,5 @@ void UGAJump::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGa
 	}
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }

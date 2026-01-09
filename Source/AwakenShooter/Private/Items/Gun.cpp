@@ -233,7 +233,7 @@ void AGun::OnHitOther(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPr
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OtherCharacter, FASGameplayTags::Event::Hit, EventData);
 
 		FGameplayEffectSpec Spec = FGameplayEffectSpec(ThrowHitEffect.GetDefaultObject(), EffectContext);
-		const float Damage = FMath::Clamp(EventData.EventMagnitude, 0.f, 50.f);
+		const float Damage = FMath::Clamp(EventData.EventMagnitude, 25.f, 75.f);
 		Spec.SetSetByCallerMagnitude(FASGameplayTags::Data::Damage, Damage);
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Damage: ") + FString::SanitizeFloat(Damage));
 		OtherCharacter->Stun(EventData.EventMagnitude * .5f);

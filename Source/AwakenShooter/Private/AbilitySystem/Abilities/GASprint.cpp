@@ -30,6 +30,7 @@ void UGASprint::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 	{
 		AppliedEffectHandle = BP_ApplyGameplayEffectToOwner(SprintEffect, 1.f,1);
 	}
+	
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 

@@ -40,4 +40,6 @@ void UGAClamberUp::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 	MoveComp->Velocity += FVector::UpVector * 1400.f;
 	MoveComp->SetMovementMode(MOVE_Falling);
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }

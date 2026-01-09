@@ -36,5 +36,6 @@ void UGAUseSecondary::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 
 	Character->TryActivateAbilityByTag(FASGameplayTags::Ability::Secondary);
 
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

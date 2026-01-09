@@ -75,13 +75,6 @@ void UHangingState::OnEnterState_Implementation()
 	EnterVelocity = FVector::ZeroVector;
 	
 	SetTickEnabled(true);
-
-	if (auto ASC =Character->GetAbilitySystemComponent())
-	{
-		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability::Reload);		
-		ASC->CancelAbilities(&CancelAbilitiesTags);
-	}
 }
 
 void UHangingState::OnExitState_Implementation()

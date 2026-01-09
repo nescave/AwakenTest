@@ -13,6 +13,7 @@
 #include "Character/MovementState/MovementStateComponent.h"
 #include "General/ASGameMode.h"
 #include "General/DebugCVars.h"
+#include "General/ProjectGlobals.h"
 #include "Items/Gun.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -44,13 +45,15 @@ AASCharacter::AASCharacter() :
 	GetMesh()->SetRelativeLocation(FVector(2.f, 1.f, -194.f));
 	GetMesh()->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 	GetMesh()->SetRelativeScale3D(FVector(1.2f, 1.2f, 1.2f));
+
+	GetMesh()->SetCollisionProfileName("NoCollision");
 	
 	WorldMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("World Mesh"));
 	WorldMesh->SetupAttachment(RootComponent);
 	WorldMesh->SetOwnerNoSee(true);
 	WorldMesh->SetOnlyOwnerSee(false);
 	WorldMesh->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
-
+	WorldMesh->SetCollisionProfileName("CharacterMesh");
 	MovementStateMachine = CreateDefaultSubobject<UMovementStateComponent>(TEXT("MovementStateComponent"));
 	
 	// Configure character movement
@@ -226,10 +229,11 @@ void AASCharacter::TryCancelAbilitiesWithTag(FGameplayTag AbilityTag)
 
 void AASCharacter::SetIgnoreProjectiles(bool bIgnoreProjectiles)
 {
+	WorldMesh->SetCollisionProfileName("Custom");
 	if (bIgnoreProjectiles)
-		GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Ignore);
+		WorldMesh->SetCollisionResponseToChannel(ASTraceChannel::Projectiles, ECR_Ignore);
 	else
-		GetMesh()->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
+		WorldMesh->SetCollisionResponseToChannel(ASTraceChannel::Projectiles, ECR_Block);
 }
 
 void AASCharacter::EquipGun(AGun* Gun)
@@ -420,7 +424,7 @@ void AASCharacter::Stun(float Duration)
 		return;
 	
 	FGameplayEffectSpec Spec = FGameplayEffectSpec(StunEffect.GetDefaultObject(), AbilitySystemComponent->MakeEffectContext());
-	Spec.SetSetByCallerMagnitude(FASGameplayTags::Data::StunDuration, FMath::Clamp(Duration, 0.1f, 1.f));
+	Spec.SetSetByCallerMagnitude(FASGameplayTags::Data::StunDuration, FMath::Lerp( .2f, 3.f, FMath::Clamp(Duration, 0.f, 1.f)));
 	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(Spec);
 }
 
@@ -465,7 +469,7 @@ UAISense_Sight::EVisibilityResult AASCharacter::CanBeSeenFrom(const FCanBeSeenFr
     }
 
     USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!MeshComp || !MeshComp->SkeletalMesh)
+    if (!MeshComp || !MeshComp->GetSkeletalMeshAsset())
     {
         return UAISense_Sight::EVisibilityResult::NotVisible;
     }

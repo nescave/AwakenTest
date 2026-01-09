@@ -141,13 +141,6 @@ void USlidingState::OnEnterState_Implementation()
 
 	PlayerCharacter->GetSlideHitBox()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	PlayerCharacter->SetIgnoreProjectiles(true);
-	
-	if (auto ASC = PlayerCharacter ? PlayerCharacter->GetAbilitySystemComponent() : nullptr)
-	{
-		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability::Reload);		
-		ASC->CancelAbilities(&CancelAbilitiesTags);
-	}
 }
 
 void USlidingState::OnExitState_Implementation()

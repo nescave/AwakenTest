@@ -28,6 +28,7 @@ void UGASlide::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 
 	Character->AddClampedVelocity(Character->GetVelocity().GetSafeNormal(), SlideSpeedBoost, true);
 	Character->GetMovementStateMachine()->ChangeState(EMovementState::Sliding);
-	
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

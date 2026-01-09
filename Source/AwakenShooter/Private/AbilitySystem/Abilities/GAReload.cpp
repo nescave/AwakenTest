@@ -46,6 +46,8 @@ void UGAReload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const F
 		&UGAReload::OnFinishedReloading
 	);
 	Task->ReadyForActivation();
+
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
 bool UGAReload::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

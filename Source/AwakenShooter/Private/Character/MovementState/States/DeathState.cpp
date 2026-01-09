@@ -33,7 +33,9 @@ void UDeathState::OnEnterState_Implementation()
 			Character->GetEquippedGun()->Reload();
 			if (BotCharacter->GetTarget())
 			{
-				ThrowDirection = (BotCharacter->GetTargetPosition() + BotCharacter->GetTarget()->GetVelocity() * .5f - Character->GetActorLocation()).GetSafeNormal();
+				FVector ApproxTargetLocation = (BotCharacter->GetTargetPosition() + BotCharacter->GetTarget()->GetVelocity() * .5f
+					- Character->GetActorLocation()).GetSafeNormal();
+				ThrowDirection = (ApproxTargetLocation + FVector::UpVector * .65f ).GetSafeNormal();
 			}
 		}
 		Character->GetEquippedGun()->Throw(ThrowDirection * 350.f);

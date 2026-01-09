@@ -25,7 +25,7 @@ void AASGameMode::BeginPlay()
 	OnPlayerDeathDelegate.AddDynamic(this, &AASGameMode::OnPlayerDeath);
 	OnEnemyKilledDelegate.AddDynamic(this, &AASGameMode::OnEnemyKilled);
 	OnLateInitDelegate.AddDynamic(this, &AASGameMode::OnLateInit);
-	ResetRound();
+	GetWorldTimerManager().SetTimer(OnLateInitHandle, this, &AASGameMode::LateInit, 2.0f, false);
 
 	if (UASGameInstance* GI = Cast<UASGameInstance>(GetGameInstance()))
 	{
@@ -45,7 +45,6 @@ void AASGameMode::Tick(float DeltaSeconds)
 
 void AASGameMode::OnRoundReset_Implementation()
 {
-	GetWorldTimerManager().SetTimer(OnLateInitHandle, this, &AASGameMode::LateInit, 1.0f, false);
 }
 
 void AASGameMode::OnRoundStart_Implementation()
@@ -97,6 +96,7 @@ void AASGameMode::OnEnemyKilled_Implementation()
 
 void AASGameMode::OnLateInit_Implementation()
 {
+	ResetRound();
 }
 
 void AASGameMode::ResetRound()

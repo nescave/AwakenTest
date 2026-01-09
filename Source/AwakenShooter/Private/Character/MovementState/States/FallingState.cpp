@@ -66,13 +66,6 @@ void UFallingState::OnEnterState_Implementation()
 {
 	Super::OnEnterState_Implementation();
 	SetTickEnabled(true);
-	
-	if (auto ASC = Character ? Character->GetAbilitySystemComponent() : nullptr)
-	{
-		// cancel reload ability
-		FGameplayTagContainer CancelAbilitiesTags = FGameplayTagContainer(FASGameplayTags::Ability::Reload);		
-		ASC->CancelAbilities(&CancelAbilitiesTags);
-	}
 }
 
 void UFallingState::OnExitState_Implementation()

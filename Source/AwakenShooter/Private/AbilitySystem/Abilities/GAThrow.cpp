@@ -45,6 +45,8 @@ void UGAThrow::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		FASGameplayTags::Ability::Event::Throw);
 	OnThrowTask->EventReceived.AddDynamic(this, &UGAThrow::OnThrow);
 	OnThrowTask->ReadyForActivation();
+	
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 }
 
 void UGAThrow::OnThrow(FGameplayEventData Payload)
@@ -107,7 +109,7 @@ void UGAThrow::OnThrow(FGameplayEventData Payload)
 						false, FASCVars::ASDebugDrawDuration);
 				BestScore = Score;
 				BestTarget = OverlapPositionRaised;
-				ThrowPower = FMath::Clamp(OverlapDistance * 2.f, 500.f, 2000.f);
+				ThrowPower = FMath::Clamp(OverlapDistance * 2.f, 800.f, 2000.f);
 			}
 		}
 		if (!BestTarget.IsNearlyZero())

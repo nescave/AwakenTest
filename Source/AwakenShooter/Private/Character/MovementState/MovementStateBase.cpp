@@ -4,7 +4,7 @@
 #include "Character/MovementState/MovementStateBase.h"
 
 #include "AwakenShooter.h"
-#include "CharacterHeightTransition.h"
+#include "Character/MovementState/CharacterHeightTransition.h"
 #include "InputActionValue.h"
 #include "AbilitySystem/GameplayTags.h"
 #include "Camera/CameraComponent.h"
