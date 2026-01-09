@@ -23,7 +23,7 @@ Implemented systems include:
 ## How to Run
 
 ### Option 1: Packaged Build
-1. Download the build from `https://drive.google.com/drive/folders/1ts94w83dTY-g8cnHzJAvN4X_R7dzqqMi?usp=drive_link`
+1. Download the build from [GoogleDrive](https://drive.google.com/drive/folders/1ts94w83dTY-g8cnHzJAvN4X_R7dzqqMi?usp=drive_link)
 2. Unpack the zip file.
 2. Run `AwakenShooter.exe`
 
